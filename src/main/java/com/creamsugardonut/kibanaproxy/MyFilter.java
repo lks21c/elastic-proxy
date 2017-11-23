@@ -2,10 +2,14 @@ package com.creamsugardonut.kibanaproxy;
 
 import com.netflix.zuul.ZuulFilter;
 import com.netflix.zuul.context.RequestContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.servlet.http.HttpServletRequest;
 
 public class MyFilter extends ZuulFilter {
+    private static Logger log = LoggerFactory.getLogger(MyFilter.class);
+
 
     @Override
     public String filterType() {
@@ -32,7 +36,7 @@ public class MyFilter extends ZuulFilter {
         // add custom headers
         ctx.addZuulRequestHeader("x-custom-header", "foobar");
 
-        System.out.println("yesyes " + request.getQueryString());
+        log.info("yesyes " + request.getQueryString());
 
         // additional custom logic goes here
 
