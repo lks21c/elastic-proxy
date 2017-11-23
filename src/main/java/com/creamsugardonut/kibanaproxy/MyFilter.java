@@ -32,7 +32,7 @@ public class MyFilter extends ZuulFilter {
         // add custom headers
         ctx.addZuulRequestHeader("x-custom-header", "foobar");
 
-        System.out.println("yesyes");
+        System.out.println("yesyes " + request.getQueryString());
 
         // additional custom logic goes here
 
