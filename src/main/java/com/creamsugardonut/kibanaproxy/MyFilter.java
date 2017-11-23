@@ -6,6 +6,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.servlet.http.HttpServletRequest;
+import java.io.IOException;
+import java.util.stream.Collectors;
 
 public class MyFilter extends ZuulFilter {
     private static Logger log = LoggerFactory.getLogger(MyFilter.class);
@@ -37,6 +39,14 @@ public class MyFilter extends ZuulFilter {
         ctx.addZuulRequestHeader("x-custom-header", "foobar");
 
         log.info("yesyes " + request.getQueryString());
+
+        try {
+            String body = request.getReader().lines().collect(Collectors.joining(System.lineSeparator()));
+            System.out.println("body = " + body);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
 
         // additional custom logic goes here
 
