@@ -40,7 +40,7 @@ public class PreFilter extends ZuulFilter {
             while (headers.hasMoreElements()) {
                 String header = headers.nextElement();
                 System.out.println("header = " + header + " " + request.getHeader(header));
-                sb.append(" --header '" + header + ": " + request.getHeader(header) + "' ");
+                sb.append(" -H '" + header + ": " + request.getHeader(header) + "' ");
             }
 
             String url = request.getRequestURI() + "?" + request.getQueryString();
