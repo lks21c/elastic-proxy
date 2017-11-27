@@ -39,12 +39,14 @@ public class MyFilter extends ZuulFilter {
         ctx.addZuulRequestHeader("x-custom-header", "foobar");
 
         log.info("yesyes " + request.getQueryString());
+        log.info("yesyes " + request.getRequestURI());
 
         try {
-            String body = request.getReader().lines().collect(Collectors.joining(System.lineSeparator()));
-            System.out.println("body = " + body);
+            if (request.getRequestURI().contains("_search")) {
+                String body = request.getReader().lines().collect(Collectors.joining(System.lineSeparator()));
+                System.out.println("body = " + body);
+            }
         } catch (IOException e) {
-            e.printStackTrace();
         }
 
 
