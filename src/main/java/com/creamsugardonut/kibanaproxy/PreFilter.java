@@ -1,15 +1,12 @@
 package com.creamsugardonut.kibanaproxy;
 
-import com.google.common.io.CharStreams;
 import com.netflix.zuul.ZuulFilter;
 import com.netflix.zuul.context.RequestContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.servlet.http.HttpServletRequest;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.util.Enumeration;
 import java.util.stream.Collectors;
 
 public class PreFilter extends ZuulFilter {
@@ -41,6 +38,15 @@ public class PreFilter extends ZuulFilter {
         ctx.addZuulRequestHeader("x-custom-header", "foobar");
 
         try {
+            Enumeration<String> headers = request.getHeaderNames();
+
+            StringBuilder sb = new StringBuilder();
+            while (headers.hasMoreElements()) {
+                String header = headers.nextElement();
+                System.out.println("header = " + header + " " + request.getHeader(header));
+                sb.append(" --header '" + header + ": " + request.getHeader(header) + "' ");
+            }
+
             String url = request.getRequestURI() + "?" + request.getQueryString();
             System.out.println("request = " + url);
 
@@ -48,6 +54,8 @@ public class PreFilter extends ZuulFilter {
                 String body = request.getReader().lines().collect(Collectors.joining(System.lineSeparator()));
                 System.out.println("request body = " + body);
                 System.out.println();
+
+                System.out.println("curl -X POST -L '" + "http://alyes.melon.com" + url.replace("/proxy", "") + "' " + sb.toString() + " --data '" + body + "'");
             }
         } catch (Exception e) {
         }

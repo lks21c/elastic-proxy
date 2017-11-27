@@ -35,17 +35,17 @@ public class PostFilter extends ZuulFilter {
     public Object run() {
         RequestContext ctx = RequestContext.getCurrentContext();
 
-        if (ctx.getResponseDataStream() != null) {
-            try (final InputStream responseDataStream = ctx.getResponseDataStream()) {
-                final String responseData = CharStreams.toString(new InputStreamReader(responseDataStream, "UTF-8"));
-                ctx.setResponseBody(responseData);
-            } catch (IOException e) {
-                System.out.println("Error reading body" + e);
-            }
-
-            System.out.println("response body = " + ctx.getResponseBody());
-            System.out.println();
-        }
+//        if (ctx.getResponseDataStream() != null) {
+//            try (final InputStream responseDataStream = ctx.getResponseDataStream()) {
+//                final String responseData = CharStreams.toString(new InputStreamReader(responseDataStream, "UTF-8"));
+//                ctx.setResponseBody(responseData);
+//            } catch (IOException e) {
+//                System.out.println("Error reading body" + e);
+//            }
+//
+//            System.out.println("response body = " + ctx.getResponseBody());
+//            System.out.println();
+//        }
 
         return null;
     }
