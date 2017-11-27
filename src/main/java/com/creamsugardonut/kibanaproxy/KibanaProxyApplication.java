@@ -20,8 +20,8 @@ public class KibanaProxyApplication {
         return new PreFilter();
     }
 
-    @Bean
-    public PostFilter postFilter() {
-        return new PostFilter();
-    }
+//    @Bean
+//    public PostFilter postFilter() {
+//        return new PostFilter();
+//    }
 }
