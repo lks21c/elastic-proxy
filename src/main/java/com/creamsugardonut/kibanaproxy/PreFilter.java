@@ -30,12 +30,8 @@ public class PreFilter extends ZuulFilter {
 
     @Override
     public Object run() {
-        // RequestContext is shared by all ZuulFilters
         RequestContext ctx = RequestContext.getCurrentContext();
         HttpServletRequest request = ctx.getRequest();
-
-        // add custom headers
-        ctx.addZuulRequestHeader("x-custom-header", "foobar");
 
         try {
             Enumeration<String> headers = request.getHeaderNames();
