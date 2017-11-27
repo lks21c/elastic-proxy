@@ -41,7 +41,6 @@ public class MyFilter extends ZuulFilter {
         // add custom headers
         ctx.addZuulRequestHeader("x-custom-header", "foobar");
 
-
         try {
             String url = request.getRequestURI() + "?" + request.getQueryString();
             System.out.println(url);
