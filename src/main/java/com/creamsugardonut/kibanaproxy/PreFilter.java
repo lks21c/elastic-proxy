@@ -12,13 +12,12 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.stream.Collectors;
 
-public class MyFilter extends ZuulFilter {
-    private static Logger log = LoggerFactory.getLogger(MyFilter.class);
+public class PreFilter extends ZuulFilter {
+    private static Logger logger = LoggerFactory.getLogger(PreFilter.class);
 
 
     @Override
     public String filterType() {
-        // can be pre, route, post, and error
         return "pre";
     }
 
@@ -43,23 +42,15 @@ public class MyFilter extends ZuulFilter {
 
         try {
             String url = request.getRequestURI() + "?" + request.getQueryString();
-            System.out.println(url);
+            System.out.println("request = " + url);
 
             if ("POST".equals(request.getMethod())) {
                 String body = request.getReader().lines().collect(Collectors.joining(System.lineSeparator()));
-                System.out.println(request.getRequestURI() + "?" + request.getQueryString() + " body = " + body);
+                System.out.println("request body = " + body);
+                System.out.println();
             }
         } catch (Exception e) {
         }
-
-        if (ctx.getResponseDataStream() == null){
-            System.out.println("it's null");
-        }
-
-        String body = ctx.getResponseBody();
-        System.out.println("response body = " + body);
-
-        System.out.println();
 
         return null;
     }

@@ -16,7 +16,12 @@ public class KibanaProxyApplication {
 	}
 
     @Bean
-    public MyFilter myFilter() {
-        return new MyFilter();
+    public PreFilter preFilter() {
+        return new PreFilter();
+    }
+
+    @Bean
+    public PostFilter postFilter() {
+        return new PostFilter();
     }
 }
