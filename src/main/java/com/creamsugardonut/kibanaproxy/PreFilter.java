@@ -8,6 +8,7 @@ import org.apache.http.util.EntityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
 
@@ -20,6 +21,9 @@ public class PreFilter extends ZuulFilter {
 
     @Autowired
     HttpService httpService;
+
+    @Value("${zuul.routes.proxy.url}")
+    private String esUrl;
 
     @Override
     public String filterType() {
@@ -70,8 +74,8 @@ public class PreFilter extends ZuulFilter {
 
                 logger.info("curl -X POST -L '" + "http://alyes.melon.com" + url.replace("/proxy", "") + "' " + " --data '" + body + "'");
 
-                if (request.getRequestURI().equals("/proxy/_msearch") && body.contains("mel_com_private_music_st_realtime_member_20171219")) {
-                    HttpResponse res = httpService.executeHttpRequest(HttpMethod.POST, "http://alyes.melon.com/_msearch", new StringEntity(body));
+                if (request.getRequestURI().equals("/proxy/_msearch")) {
+                    HttpResponse res = httpService.executeHttpRequest(HttpMethod.POST, esUrl + url.replace("/proxy", ""), new StringEntity(body));
                     logger.info("res = " + EntityUtils.toString(res.getEntity()));
                     ctx.setResponseBody(EntityUtils.toString(res.getEntity()));
                     ctx.setSendZuulResponse(false);
