@@ -57,25 +57,24 @@ public class PreFilter extends ZuulFilter {
 //            StringBuilder sb = new StringBuilder();
 //            while (headers.hasMoreElements()) {
 //                String header = headers.nextElement();
-//                System.out.println("header = " + header + " " + request.getHeader(header));
+//                logger.info("header = " + header + " " + request.getHeader(header));
 //                sb.append(" -H '" + header + ": " + request.getHeader(header) + "' ");
 //            }
 
             String url = request.getRequestURI() + "?" + request.getQueryString();
-            System.out.println("request = " + request.getRequestURI());
+            logger.info("request = " + request.getRequestURI());
 
             if ("POST".equals(request.getMethod())) {
                 String body = request.getReader().lines().collect(Collectors.joining(System.lineSeparator())) + "\n";
-                System.out.println("request body = " + body);
-                System.out.println();
+                logger.info("request body = " + body);
 
-                System.out.println("curl -X POST -L '" + "http://alyes.melon.com" + url.replace("/proxy", "") + "' " + " --data '" + body + "'");
+                logger.info("curl -X POST -L '" + "http://alyes.melon.com" + url.replace("/proxy", "") + "' " + " --data '" + body + "'");
 
                 if (request.getRequestURI().equals("/proxy/_msearch") && body.contains("mel_com_private_music_st_realtime_member_20171219")) {
-
                     HttpResponse res = httpService.executeHttpRequest(HttpMethod.POST, "http://alyes.melon.com/_msearch", new StringEntity(body));
-                    System.out.println("res = " + EntityUtils.toString(res.getEntity()));
+                    logger.info("res = " + EntityUtils.toString(res.getEntity()));
                     ctx.setResponseBody(EntityUtils.toString(res.getEntity()));
+                    ctx.setSendZuulResponse(false);
                 }
             }
         } catch (Exception e) {
