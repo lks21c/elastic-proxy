@@ -2,7 +2,9 @@ package com.creamsugardonut.kibanaproxy;
 
 import com.netflix.zuul.ZuulFilter;
 import com.netflix.zuul.context.RequestContext;
+import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpResponse;
+import org.apache.http.HttpStatus;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.util.EntityUtils;
 import org.slf4j.Logger;
@@ -13,8 +15,12 @@ import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
 
 import javax.servlet.http.HttpServletRequest;
+import java.io.IOException;
 import java.util.stream.Collectors;
 
+/**
+ * @author lks21c
+ */
 @Service
 public class PreFilter extends ZuulFilter {
     private static Logger logger = LoggerFactory.getLogger(PreFilter.class);
@@ -24,6 +30,8 @@ public class PreFilter extends ZuulFilter {
 
     @Value("${zuul.routes.proxy.url}")
     private String esUrl;
+
+    private static final String PROXY = "proxy";
 
     @Override
     public String filterType() {
@@ -56,33 +64,35 @@ public class PreFilter extends ZuulFilter {
         }
 
         try {
-//            Enumeration<String> headers = request.getHeaderNames();
-//
-//            StringBuilder sb = new StringBuilder();
-//            while (headers.hasMoreElements()) {
-//                String header = headers.nextElement();
-//                logger.info("header = " + header + " " + request.getHeader(header));
-//                sb.append(" -H '" + header + ": " + request.getHeader(header) + "' ");
-//            }
-
-            String url = request.getRequestURI() + "?" + request.getQueryString();
-            logger.info("request = " + request.getRequestURI());
+            String url;
+            if (!StringUtils.isEmpty(request.getQueryString())) {
+                url = request.getRequestURI().replace("/" + PROXY, "") + "?" + request.getQueryString();
+            } else {
+                url = request.getRequestURI().replace("/" + PROXY, "");
+            }
+            String targetUrl = esUrl + url;
+            logger.info("request = " + targetUrl);
 
             if ("POST".equals(request.getMethod())) {
-                String body = request.getReader().lines().collect(Collectors.joining(System.lineSeparator())) + "\n";
-                logger.info("request body = " + body);
+                String reqBody = getRequestBody(request);
+                logger.info("reqBody = " + reqBody);
+                logger.info("curl -X POST -L '" + targetUrl + "' " + " --data '" + reqBody + "'");
 
-                logger.info("curl -X POST -L '" + "http://alyes.melon.com" + url.replace("/proxy", "") + "' " + " --data '" + body + "'");
-
-                if (request.getRequestURI().equals("/proxy/_msearch")) {
-                    HttpResponse res = httpService.executeHttpRequest(HttpMethod.POST, esUrl + url.replace("/proxy", ""), new StringEntity(body));
+                if (request.getRequestURI().equals("/_msearch")) {
+                    HttpResponse res = httpService.executeHttpRequest(HttpMethod.POST, targetUrl, new StringEntity(reqBody));
                     logger.info("res = " + EntityUtils.toString(res.getEntity()));
-                    ctx.setResponseBody(EntityUtils.toString(res.getEntity()));
-                    ctx.setSendZuulResponse(false);
+                    if (res.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
+                        ctx.setResponseBody(EntityUtils.toString(res.getEntity()));
+                        ctx.setSendZuulResponse(false);
+                    }
                 }
             }
         } catch (Exception e) {
         }
         return null;
+    }
+
+    private String getRequestBody(HttpServletRequest request) throws IOException {
+        return request.getReader().lines().collect(Collectors.joining(System.lineSeparator())) + "\n";
     }
 }
