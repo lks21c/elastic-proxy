@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="euc-kr"?>
+<!DOCTYPE log4j:configuration PUBLIC "-//LOGGER" "log4j.dtd">
+<log4j:configuration xmlns:log4j="http://jakarta.apache.org/log4j/">
+
+    <appender name="nullAppender" class="org.apache.log4j.varia.NullAppender"/>
+
+    <appender name="outConsole" class="org.apache.log4j.ConsoleAppender">
+        <!-- Info Console -->
+        <param name="Target" value="System.out"/>
+        <layout class="org.apache.log4j.PatternLayout">
+            <param name="ConversionPattern" value="%d %5p [%c] %m%n"/>
+        </layout>
+        <filter class="org.apache.log4j.varia.LevelRangeFilter">
+            <param name="LevelMin" value="TRACE"/>
+            <param name="LevelMax" value="INFO"/>
+            <param name="AcceptOnMatch" value="true"/>
+        </filter>
+    </appender>
+
+    <appender name="errConsole" class="org.apache.log4j.ConsoleAppender">
+        <!-- Error Console -->
+        <param name="Target" value="System.err"/>
+        <layout class="org.apache.log4j.PatternLayout">
+            <param name="ConversionPattern" value="%d %5p [%c] %m%n"/>
+        </layout>
+        <filter class="org.apache.log4j.varia.LevelRangeFilter">
+            <param name="LevelMin" value="WARN"/>
+            <param name="LevelMax" value="FATAL"/>
+            <param name="AcceptOnMatch" value="true"/>
+        </filter>
+    </appender>
+
+    <logger name="com.creamsugardonut">
+        <level value="debug"/>
+    </logger>
+
+    <logger name="org.apache">
+        <level value="warn"/>
+    </logger>
+
+    <root>
+        <!-- Root Logger -->
+        <level value="warn"/>
+        <appender-ref ref="outConsole"/>
+        <appender-ref ref="errConsole"/>
+    </root>
+
+</log4j:configuration>

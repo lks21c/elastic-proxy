@@ -1,5 +1,7 @@
 package com.creamsugardonut.kibanaproxy.service;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.joda.time.DateTime;
 import org.springframework.stereotype.Service;
 
@@ -8,13 +10,15 @@ import java.util.Map;
 
 @Service
 public class CacheService {
+    private static final Logger logger = LogManager.getLogger(CacheService.class);
+
     public void manipulateQuery(Map<String, Object> map) {
         for (String key : map.keySet()) {
-            System.out.println("key = " + key);
+            logger.info("key = " + key);
         }
 
         // Get gte, lte
-        DateTime startDt, endDt;
+        DateTime startDt = null, endDt = null;
         Map<String, Object> query = (Map<String, Object>) map.get("query");
         Map<String, Object> bool = (Map<String, Object>) query.get("bool");
         List<Map<String, Object>> must = (List<Map<String, Object>>) bool.get("must");
@@ -28,8 +32,8 @@ public class CacheService {
                     startDt = new DateTime(gte);
                     endDt = new DateTime(lte);
 
-                    System.out.println("startDt = " + startDt);
-                    System.out.println("endDt = " + endDt);
+                    logger.info("startDt = " + startDt);
+                    logger.info("endDt = " + endDt);
                 }
             }
         }
@@ -40,11 +44,18 @@ public class CacheService {
             for (String aggsKey : aggs.keySet()) {
                 Map<String, Object> firstDepthAggs = (Map<String, Object>) aggs.get(aggsKey);
 
+                Map<String, Object> date_histogram = (Map<String, Object>) firstDepthAggs.get("date_histogram");
+                String interval = null;
+                if (date_histogram != null) {
+                    interval = (String) date_histogram.get("interval");
+                    logger.info("interval = " + interval);
+                }
+
                 // Cacheable
-                if (firstDepthAggs.containsKey("date_histogram")) {
-                    Map<String, Object> date_histogram = (Map<String, Object>) firstDepthAggs.get("date_histogram");
-                    String interval = (String) date_histogram.get("interval");
-                    System.out.println("interval = " + interval);
+                if ((interval.contains("d") && startDt.getSecondOfDay() == 0)
+                        || (interval.contains("h") && startDt.getMinuteOfHour() == 0 && startDt.getSecondOfMinute() == 0)
+                        || (interval.contains("m") && startDt.getSecondOfMinute() == 0)) {
+                    logger.info("cacheable");
                 }
             }
         }

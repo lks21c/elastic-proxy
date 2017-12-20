@@ -69,6 +69,8 @@ public class PreFilter extends ZuulFilter {
                 request.getRequestURI().equals("/proxy/_nodes/_local") ||
                 request.getRequestURI().equals("/proxy/_nodes") ||
                 request.getRequestURI().equals("/proxy/") ||
+                request.getRequestURI().equals("/proxy/_mapping") ||
+                request.getRequestURI().equals("/proxy/_aliases") ||
                 request.getRequestURI().equals("/proxy/_cluster/health/.kibana")) {
             return null;
         }
