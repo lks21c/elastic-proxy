@@ -8,13 +8,11 @@ import com.netflix.zuul.context.RequestContext;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
-import org.apache.http.entity.StringEntity;
 import org.apache.http.util.EntityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
 
 import javax.servlet.http.HttpServletRequest;
@@ -96,7 +94,7 @@ public class PreFilter extends ZuulFilter {
                 if (request.getRequestURI().equals("/" + PROXY + "/_msearch")) {
 
                     // parses query and manipulates query.
-                    for (int i = 0; i < reqs.length ; i++) {
+                    for (int i = 0; i < reqs.length; i++) {
                         if (i % 2 == 1) {
                             System.out.println("yesyes");
                             Map<String, Object> query = parsingService.parseXContent(reqs[i]);
@@ -105,8 +103,7 @@ public class PreFilter extends ZuulFilter {
                     }
 
                     // Invokes query
-                    HttpResponse res = httpService.executeHttpRequest(HttpMethod.POST, targetUrl, new StringEntity(reqBody));
-                    logger.info("res = " + EntityUtils.toString(res.getEntity()));
+                    HttpResponse res = cacheService.executeQuery(targetUrl, reqBody);
 
                     // Intercepts response and cancels the original request.
                     if (res.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
