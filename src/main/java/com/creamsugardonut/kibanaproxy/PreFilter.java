@@ -1,5 +1,8 @@
 package com.creamsugardonut.kibanaproxy;
 
+import com.creamsugardonut.kibanaproxy.service.CacheService;
+import com.creamsugardonut.kibanaproxy.service.ParsingService;
+import com.creamsugardonut.kibanaproxy.util.JsonUtil;
 import com.netflix.zuul.ZuulFilter;
 import com.netflix.zuul.context.RequestContext;
 import org.apache.commons.lang.StringUtils;
@@ -16,6 +19,7 @@ import org.springframework.stereotype.Service;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -27,6 +31,12 @@ public class PreFilter extends ZuulFilter {
 
     @Autowired
     HttpService httpService;
+
+    @Autowired
+    ParsingService parsingService;
+
+    @Autowired
+    CacheService cacheService;
 
     @Value("${zuul.routes.proxy.url}")
     private String esUrl;
@@ -75,12 +85,28 @@ public class PreFilter extends ZuulFilter {
 
             if ("POST".equals(request.getMethod())) {
                 String reqBody = getRequestBody(request);
+
+                String[] reqs = reqBody.split("\n");
+
                 logger.info("reqBody = " + reqBody);
                 logger.info("curl -X POST -L '" + targetUrl + "' " + " --data '" + reqBody + "'");
 
-                if (request.getRequestURI().equals("/_msearch")) {
+                if (request.getRequestURI().equals("/" + PROXY + "/_msearch")) {
+
+                    // parses query and manipulates query.
+                    for (int i = 0; i < reqs.length ; i++) {
+                        if (i % 2 == 1) {
+                            System.out.println("yesyes");
+                            Map<String, Object> query = parsingService.parseXContent(reqs[i]);
+                            cacheService.manipulateQuery(query);
+                        }
+                    }
+
+                    // Invokes query
                     HttpResponse res = httpService.executeHttpRequest(HttpMethod.POST, targetUrl, new StringEntity(reqBody));
                     logger.info("res = " + EntityUtils.toString(res.getEntity()));
+
+                    // Intercepts response and cancels the original request.
                     if (res.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
                         ctx.setResponseBody(EntityUtils.toString(res.getEntity()));
                         ctx.setSendZuulResponse(false);
