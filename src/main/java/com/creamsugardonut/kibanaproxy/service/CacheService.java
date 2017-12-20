@@ -1,5 +1,6 @@
 package com.creamsugardonut.kibanaproxy.service;
 
+import org.joda.time.DateTime;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -13,6 +14,7 @@ public class CacheService {
         }
 
         // Get gte, lte
+        DateTime startDt, endDt;
         Map<String, Object> query = (Map<String, Object>) map.get("query");
         Map<String, Object> bool = (Map<String, Object>) query.get("bool");
         List<Map<String, Object>> must = (List<Map<String, Object>>) bool.get("must");
@@ -23,8 +25,11 @@ public class CacheService {
                 for (String rangeKey : range.keySet()) {
                     Long gte = (Long) ((Map<String, Object>) range.get(rangeKey)).get("gte");
                     Long lte = (Long) ((Map<String, Object>) range.get(rangeKey)).get("lte");
-                    System.out.println("gte = " + gte);
-                    System.out.println("lte = " + lte);
+                    startDt = new DateTime(gte);
+                    endDt = new DateTime(lte);
+
+                    System.out.println("startDt = " + startDt);
+                    System.out.println("endDt = " + endDt);
                 }
             }
         }
@@ -37,7 +42,9 @@ public class CacheService {
 
                 // Cacheable
                 if (firstDepthAggs.containsKey("date_histogram")) {
-
+                    Map<String, Object> date_histogram = (Map<String, Object>) firstDepthAggs.get("date_histogram");
+                    String interval = (String) date_histogram.get("interval");
+                    System.out.println("interval = " + interval);
                 }
             }
         }

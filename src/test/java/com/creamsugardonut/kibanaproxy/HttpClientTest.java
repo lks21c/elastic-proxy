@@ -1,5 +1,6 @@
 package com.creamsugardonut.kibanaproxy;
 
+import com.creamsugardonut.kibanaproxy.service.HttpService;
 import org.apache.http.HttpResponse;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.util.EntityUtils;

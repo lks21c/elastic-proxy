@@ -1,8 +1,8 @@
 package com.creamsugardonut.kibanaproxy;
 
 import com.creamsugardonut.kibanaproxy.service.CacheService;
+import com.creamsugardonut.kibanaproxy.service.HttpService;
 import com.creamsugardonut.kibanaproxy.service.ParsingService;
-import com.creamsugardonut.kibanaproxy.util.JsonUtil;
 import com.netflix.zuul.ZuulFilter;
 import com.netflix.zuul.context.RequestContext;
 import org.apache.commons.lang.StringUtils;

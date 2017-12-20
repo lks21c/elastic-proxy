@@ -1,4 +1,4 @@
-package com.creamsugardonut.kibanaproxy;
+package com.creamsugardonut.kibanaproxy.service;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.MethodNotSupportedException;
