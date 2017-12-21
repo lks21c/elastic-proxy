@@ -150,6 +150,7 @@ public class NativeParsingServiceImpl implements ParsingService {
     private final ParseFieldRegistry<SignificanceHeuristicParser> significanceHeuristicParserRegistry = new ParseFieldRegistry<>(
             "significance_heuristic");
 
+    @Override
     public Map<String, Object> parseXContent(String str) {
         return XContentHelper.convertToMap(XContentType.JSON.xContent(), str, true);
     }

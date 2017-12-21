@@ -1,0 +1,58 @@
+PUT /cache?master_timeout=5m
+{
+  "settings": {
+    "number_of_shards": 3,
+    "number_of_replicas": 1,
+    "refresh_interval": "10s"
+  },
+  "mappings": {
+    "info": {
+      "_all": {
+        "enabled": false
+      },
+      "_source": {
+        "enabled": true
+      },
+      "properties": {
+        "key": {
+          "type": "keyword",
+          "store": false,
+          "doc_values": true
+        },
+        "value": {
+          "type": "keyword",
+          "store": false,
+          "doc_values": false
+        },
+        "ts": {
+          "type": "date",
+          "store": false
+        }
+      },
+      "dynamic_templates": [
+        {
+          "unindexed_text": {
+            "match_mapping_type": "text",
+            "mapping": {
+              "type": "keyword",
+              "index": true,
+              "doc_values": true,
+              "store": false
+            }
+          }
+        },
+        {
+          "unindexed_text": {
+            "match_mapping_type": "string",
+            "mapping": {
+              "type": "keyword",
+              "index": true,
+              "doc_values": true,
+              "store": false
+            }
+          }
+        }
+      ]
+    }
+  }
+}

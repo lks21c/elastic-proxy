@@ -1,7 +1,7 @@
 package com.creamsugardonut.kibanaproxy;
 
 import com.creamsugardonut.kibanaproxy.service.CacheService;
-import com.creamsugardonut.kibanaproxy.service.HttpService;
+import com.creamsugardonut.kibanaproxy.service.ElasticSearchServiceService;
 import com.creamsugardonut.kibanaproxy.service.NativeParsingServiceImpl;
 import com.netflix.zuul.ZuulFilter;
 import com.netflix.zuul.context.RequestContext;
@@ -17,7 +17,6 @@ import org.springframework.stereotype.Service;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -28,7 +27,7 @@ public class PreFilter extends ZuulFilter {
     private static Logger logger = LoggerFactory.getLogger(PreFilter.class);
 
     @Autowired
-    HttpService httpService;
+    ElasticSearchServiceService esService;
 
     @Autowired
     NativeParsingServiceImpl parsingService;
@@ -94,16 +93,16 @@ public class PreFilter extends ZuulFilter {
                 if (request.getRequestURI().equals("/" + PROXY + "/_msearch")) {
 
                     // parses query and manipulates query.
-                    for (int i = 0; i < reqs.length; i++) {
-                        if (i % 2 == 1) {
-                            System.out.println("yesyes");
-                            Map<String, Object> query = parsingService.parseXContent(reqs[i]);
-                            cacheService.manipulateQuery(query);
-                        }
-                    }
+//                    for (int i = 0; i < reqs.length; i++) {
+//                        if (i % 2 == 1) {
+//                            Map<String, Object> query = parsingService.parseXContent(reqs[i]);
+//                            cacheService.manipulateQuery(query);
+//                        }
+//                    }
 
                     // Invokes query
-                    HttpResponse res = cacheService.executeQuery(targetUrl, reqBody);
+                    logger.info("invokeinvoke");
+                    HttpResponse res = esService.executeQuery(targetUrl, reqBody);
 
                     // Intercepts response and cancels the original request.
                     if (res.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {

@@ -1,21 +1,14 @@
 package com.creamsugardonut.kibanaproxy.service;
 
 import com.creamsugardonut.kibanaproxy.util.JsonUtil;
-import org.apache.http.HttpResponse;
 import org.apache.http.MethodNotSupportedException;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.util.EntityUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.elasticsearch.index.query.BoolQueryBuilder;
-import org.elasticsearch.index.query.QueryBuilder;
-import org.elasticsearch.index.query.RangeQueryBuilder;
 import org.elasticsearch.search.aggregations.AggregationBuilder;
 import org.elasticsearch.search.aggregations.AggregatorFactories;
 import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogramAggregationBuilder;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -27,12 +20,16 @@ public class CacheService {
     private static final Logger logger = LogManager.getLogger(CacheService.class);
 
     @Autowired
-    private HttpService httpService;
+    private ElasticSearchServiceService elasticSearchServiceService;
 
     @Autowired
     private NativeParsingServiceImpl parsingService;
 
-    public void manipulateQuery(Map<String, Object> map) throws IOException {
+    public void manipulateQuery(String info) throws IOException, MethodNotSupportedException {
+
+        String[] arr = info.split("\n");
+        Map<String, Object> map = parsingService.parseXContent(arr[1]);
+
         for (String key : map.keySet()) {
             logger.info("key = " + key);
         }
@@ -40,18 +37,18 @@ public class CacheService {
         // Get gte, lte
         DateTime startDt = null, endDt = null;
         Map<String, Object> query = (Map<String, Object>) map.get("query");
+        Map<String, Object> bool = (Map<String, Object>) query.get("bool");
+        List<Map<String, Object>> must = (List<Map<String, Object>>) bool.get("must");
 
-        QueryBuilder qb = parsingService.parseQuery(JsonUtil.convertAsString(query));
+        for (Map<String, Object> obj : must) {
 
-        if (qb instanceof BoolQueryBuilder){
-            BoolQueryBuilder bq = (BoolQueryBuilder) qb;
-            List<QueryBuilder> mustList = bq.must();
-            for (QueryBuilder eachMust : mustList) {
-                if (eachMust instanceof RangeQueryBuilder) {
-                    RangeQueryBuilder rq = (RangeQueryBuilder) eachMust;
-
-                    startDt = new DateTime(rq.from());
-                    endDt = new DateTime(rq.to());
+            Map<String, Object> range = (Map<String, Object>) obj.get("range");
+            if (range != null) {
+                for (String rangeKey : range.keySet()) {
+                    Long gte = (Long) ((Map<String, Object>) range.get(rangeKey)).get("gte");
+                    Long lte = (Long) ((Map<String, Object>) range.get(rangeKey)).get("lte");
+                    startDt = new DateTime(gte);
+                    endDt = new DateTime(lte);
 
                     logger.info("startDt = " + startDt);
                     logger.info("endDt = " + endDt);
@@ -77,15 +74,13 @@ public class CacheService {
                         || (interval.contains("h") && startDt.getMinuteOfHour() == 0 && startDt.getSecondOfMinute() == 0)
                         || (interval.contains("m") && startDt.getSecondOfMinute() == 0)) {
                     logger.info("cacheable");
+
+                    elasticSearchServiceService.executeQuery("http://alyes.melon.com/_msearch", info);
                 }
             }
         }
+
     }
 
-    public HttpResponse executeQuery(String targetUrl, String reqBody) throws IOException, MethodNotSupportedException {
-        HttpResponse res = httpService.executeHttpRequest(HttpMethod.POST, targetUrl, new StringEntity(reqBody));
-        Map<String, Object> map = parsingService.parseXContent(EntityUtils.toString(res.getEntity()));
-        logger.info("res = " + JsonUtil.convertAsString(map));
-        return res;
-    }
+
 }
