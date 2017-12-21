@@ -1,6 +1,6 @@
 package com.creamsugardonut.kibanaproxy.config;
 
-import com.creamsugardonut.kibanaproxy.repository.CacheRepository;
+import com.creamsugardonut.kibanaproxy.repository.InMemoryCacheRepositoryImpl;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cache.concurrent.ConcurrentMapCache;
@@ -22,7 +22,7 @@ public class CacheConfig {
     @Bean
     public CacheManager cacheManager() {
         SimpleCacheManager cacheManager = new SimpleCacheManager();
-        cacheManager.setCaches(Arrays.asList(new ConcurrentMapCache(CacheRepository.CACHE_KEY)));
+        cacheManager.setCaches(Arrays.asList(new ConcurrentMapCache(InMemoryCacheRepositoryImpl.CACHE_KEY)));
         return cacheManager;
     }
 }
