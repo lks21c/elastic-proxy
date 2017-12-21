@@ -95,7 +95,7 @@ public class ElasticSearchServiceService {
             BulkRequest br = new BulkRequest();
             Map<String, Object> aggrs = (Map<String, Object>) resp.get("aggregations");
             for (String aggKey : aggrs.keySet()) {
-                System.out.println(aggrs.get(aggKey));
+                logger.info(aggrs.get(aggKey));
 
                 LinkedHashMap<String, Object> buckets = (LinkedHashMap<String, Object>) aggrs.get(aggKey);
 
@@ -104,7 +104,7 @@ public class ElasticSearchServiceService {
                     for (Map<String, Object> bucket : bucketList) {
                         String key_as_string = (String) bucket.get("key_as_string");
                         Long key = (Long) bucket.get("key");
-                        System.out.println("key_as_string = " + key_as_string);
+                        logger.info("key_as_string = " + key_as_string);
 
                         DateHistogramBucket dhb = new DateHistogramBucket(new DateTime(key), bucket);
                         dhbList.add(dhb);
