@@ -8,6 +8,10 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.util.EntityUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.QueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.index.query.RangeQueryBuilder;
 import org.elasticsearch.search.aggregations.AggregationBuilder;
 import org.elasticsearch.search.aggregations.AggregatorFactories;
 import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogramAggregationBuilder;
@@ -30,8 +34,6 @@ public class CacheService {
     @Autowired
     private ParsingService parsingService;
 
-    private ObjectMapper mapper = new ObjectMapper();
-
     public void manipulateQuery(Map<String, Object> map) throws IOException {
         for (String key : map.keySet()) {
             logger.info("key = " + key);
@@ -40,18 +42,18 @@ public class CacheService {
         // Get gte, lte
         DateTime startDt = null, endDt = null;
         Map<String, Object> query = (Map<String, Object>) map.get("query");
-        Map<String, Object> bool = (Map<String, Object>) query.get("bool");
-        List<Map<String, Object>> must = (List<Map<String, Object>>) bool.get("must");
 
-        for (Map<String, Object> obj : must) {
+        QueryBuilder qb = parsingService.parseQuery(JsonUtil.convertAsString(query));
 
-            Map<String, Object> range = (Map<String, Object>) obj.get("range");
-            if (range != null) {
-                for (String rangeKey : range.keySet()) {
-                    Long gte = (Long) ((Map<String, Object>) range.get(rangeKey)).get("gte");
-                    Long lte = (Long) ((Map<String, Object>) range.get(rangeKey)).get("lte");
-                    startDt = new DateTime(gte);
-                    endDt = new DateTime(lte);
+        if (qb instanceof BoolQueryBuilder){
+            BoolQueryBuilder bq = (BoolQueryBuilder) qb;
+            List<QueryBuilder> mustList = bq.must();
+            for (QueryBuilder eachMust : mustList) {
+                if (eachMust instanceof RangeQueryBuilder) {
+                    RangeQueryBuilder rq = (RangeQueryBuilder) eachMust;
+
+                    startDt = new DateTime(rq.from());
+                    endDt = new DateTime(rq.to());
 
                     logger.info("startDt = " + startDt);
                     logger.info("endDt = " + endDt);
@@ -61,7 +63,7 @@ public class CacheService {
 
         // Get aggs
         Map<String, Object> aggs = (Map<String, Object>) map.get("aggs");
-        AggregatorFactories.Builder af = parsingService.parseAggs(mapper.writeValueAsString(aggs));
+        AggregatorFactories.Builder af = parsingService.parseAggs(JsonUtil.convertAsString(aggs));
 
         if (af.getAggregatorFactories().size() == 1) {
             for (AggregationBuilder ab : af.getAggregatorFactories()) {
