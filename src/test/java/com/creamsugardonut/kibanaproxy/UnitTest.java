@@ -1,6 +1,5 @@
 package com.creamsugardonut.kibanaproxy;
 
-import org.apache.lucene.search.BooleanQuery;
 import org.elasticsearch.common.io.stream.NamedWriteableRegistry;
 import org.elasticsearch.common.io.stream.Writeable;
 import org.elasticsearch.common.xcontent.NamedXContentRegistry;
@@ -143,15 +142,15 @@ public class UnitTest {
     private final List<NamedXContentRegistry.Entry> namedXContents = new ArrayList<>();
 
     private final ParseFieldRegistry<SignificanceHeuristicParser> significanceHeuristicParserRegistry = new ParseFieldRegistry<>(
-        "significance_heuristic");
+            "significance_heuristic");
 
     @Test
     public void term() throws IOException {
         String term = "  {\n" +
-            "      \"poc_category\": {\n" +
-            "        \"value\": \"sample\"\n" +
-            "      }\n" +
-            "    }";
+                "      \"poc_category\": {\n" +
+                "        \"value\": \"sample\"\n" +
+                "      }\n" +
+                "    }";
 
         registerQuery(new SearchPlugin.QuerySpec<>(TermQueryBuilder.NAME, TermQueryBuilder::new, TermQueryBuilder::fromXContent));
         NamedXContentRegistry registry = new NamedXContentRegistry(namedXContents);
@@ -167,10 +166,10 @@ public class UnitTest {
     @Test
     public void term2() throws IOException {
         String term = " {\"term\": {\n" +
-            "      \"poc_category\": {\n" +
-            "        \"value\": \"sample\"\n" +
-            "      }\n" +
-            "    }}";
+                "      \"poc_category\": {\n" +
+                "        \"value\": \"sample\"\n" +
+                "      }\n" +
+                "    }}";
 
         registerQuery(new SearchPlugin.QuerySpec<>(TermQueryBuilder.NAME, TermQueryBuilder::new, TermQueryBuilder::fromXContent));
         NamedXContentRegistry registry = new NamedXContentRegistry(namedXContents);
@@ -183,14 +182,14 @@ public class UnitTest {
     @Test
     public void rangeQuery() throws IOException {
         String range = "{\n" +
-            "          \"range\": {\n" +
-            "            \"ts\": {\n" +
-            "              \"gte\": 1513263600000,\n" +
-            "              \"lte\": 1513758227507,\n" +
-            "              \"format\": \"epoch_millis\"\n" +
-            "            }\n" +
-            "          }\n" +
-            "        }";
+                "          \"range\": {\n" +
+                "            \"ts\": {\n" +
+                "              \"gte\": 1513263600000,\n" +
+                "              \"lte\": 1513758227507,\n" +
+                "              \"format\": \"epoch_millis\"\n" +
+                "            }\n" +
+                "          }\n" +
+                "        }";
 
         registerQuery(new SearchPlugin.QuerySpec<>(RangeQueryBuilder.NAME, RangeQueryBuilder::new, RangeQueryBuilder::fromXContent));
         NamedXContentRegistry registry = new NamedXContentRegistry(namedXContents);
@@ -203,119 +202,119 @@ public class UnitTest {
     @Test
     public void aggs() throws IOException {
         String aggs = " {\n" +
-            "    \"2\": {\n" +
-            "      \"date_histogram\": {\n" +
-            "        \"field\": \"ts\",\n" +
-            "        \"interval\": \"1d\",\n" +
-            "        \"time_zone\": \"Asia/Tokyo\",\n" +
-            "        \"min_doc_count\": 1\n" +
-            "      },\n" +
-            "      \"aggs\": {\n" +
-            "        \"3\": {\n" +
-            "          \"terms\": {\n" +
-            "            \"field\": \"log_type\",\n" +
-            "            \"size\": 10,\n" +
-            "            \"order\": {\n" +
-            "              \"1\": \"desc\"\n" +
-            "            }\n" +
-            "          },\n" +
-            "          \"aggs\": {\n" +
-            "            \"1\": {\n" +
-            "              \"sum\": {\n" +
-            "                \"field\": \"datapoint\"\n" +
-            "              }\n" +
-            "            }\n" +
-            "          }\n" +
-            "        }\n" +
-            "      }\n" +
-            "    }\n" +
-            "  }";
+                "    \"2\": {\n" +
+                "      \"date_histogram\": {\n" +
+                "        \"field\": \"ts\",\n" +
+                "        \"interval\": \"1d\",\n" +
+                "        \"time_zone\": \"Asia/Tokyo\",\n" +
+                "        \"min_doc_count\": 1\n" +
+                "      },\n" +
+                "      \"aggs\": {\n" +
+                "        \"3\": {\n" +
+                "          \"terms\": {\n" +
+                "            \"field\": \"log_type\",\n" +
+                "            \"size\": 10,\n" +
+                "            \"order\": {\n" +
+                "              \"1\": \"desc\"\n" +
+                "            }\n" +
+                "          },\n" +
+                "          \"aggs\": {\n" +
+                "            \"1\": {\n" +
+                "              \"sum\": {\n" +
+                "                \"field\": \"datapoint\"\n" +
+                "              }\n" +
+                "            }\n" +
+                "          }\n" +
+                "        }\n" +
+                "      }\n" +
+                "    }\n" +
+                "  }";
 
         System.out.println(aggs);
 
 
         registerAggregation(new SearchPlugin.AggregationSpec(AvgAggregationBuilder.NAME, AvgAggregationBuilder::new, AvgAggregationBuilder::parse)
-            .addResultReader(InternalAvg::new));
+                .addResultReader(InternalAvg::new));
         registerAggregation(new SearchPlugin.AggregationSpec(SumAggregationBuilder.NAME, SumAggregationBuilder::new, SumAggregationBuilder::parse)
-            .addResultReader(InternalSum::new));
+                .addResultReader(InternalSum::new));
         registerAggregation(new SearchPlugin.AggregationSpec(MinAggregationBuilder.NAME, MinAggregationBuilder::new, MinAggregationBuilder::parse)
-            .addResultReader(InternalMin::new));
+                .addResultReader(InternalMin::new));
         registerAggregation(new SearchPlugin.AggregationSpec(MaxAggregationBuilder.NAME, MaxAggregationBuilder::new, MaxAggregationBuilder::parse)
-            .addResultReader(InternalMax::new));
+                .addResultReader(InternalMax::new));
         registerAggregation(new SearchPlugin.AggregationSpec(StatsAggregationBuilder.NAME, StatsAggregationBuilder::new, StatsAggregationBuilder::parse)
-            .addResultReader(InternalStats::new));
+                .addResultReader(InternalStats::new));
         registerAggregation(new SearchPlugin.AggregationSpec(ExtendedStatsAggregationBuilder.NAME, ExtendedStatsAggregationBuilder::new,
-            ExtendedStatsAggregationBuilder::parse).addResultReader(InternalExtendedStats::new));
+                ExtendedStatsAggregationBuilder::parse).addResultReader(InternalExtendedStats::new));
         registerAggregation(new SearchPlugin.AggregationSpec(ValueCountAggregationBuilder.NAME, ValueCountAggregationBuilder::new,
-            ValueCountAggregationBuilder::parse).addResultReader(InternalValueCount::new));
+                ValueCountAggregationBuilder::parse).addResultReader(InternalValueCount::new));
         registerAggregation(new SearchPlugin.AggregationSpec(PercentilesAggregationBuilder.NAME, PercentilesAggregationBuilder::new,
-            PercentilesAggregationBuilder::parse)
-            .addResultReader(InternalTDigestPercentiles.NAME, InternalTDigestPercentiles::new)
-            .addResultReader(InternalHDRPercentiles.NAME, InternalHDRPercentiles::new));
+                PercentilesAggregationBuilder::parse)
+                .addResultReader(InternalTDigestPercentiles.NAME, InternalTDigestPercentiles::new)
+                .addResultReader(InternalHDRPercentiles.NAME, InternalHDRPercentiles::new));
         registerAggregation(new SearchPlugin.AggregationSpec(PercentileRanksAggregationBuilder.NAME, PercentileRanksAggregationBuilder::new,
-            PercentileRanksAggregationBuilder::parse)
-            .addResultReader(InternalTDigestPercentileRanks.NAME, InternalTDigestPercentileRanks::new)
-            .addResultReader(InternalHDRPercentileRanks.NAME, InternalHDRPercentileRanks::new));
+                PercentileRanksAggregationBuilder::parse)
+                .addResultReader(InternalTDigestPercentileRanks.NAME, InternalTDigestPercentileRanks::new)
+                .addResultReader(InternalHDRPercentileRanks.NAME, InternalHDRPercentileRanks::new));
         registerAggregation(new SearchPlugin.AggregationSpec(CardinalityAggregationBuilder.NAME, CardinalityAggregationBuilder::new,
-            CardinalityAggregationBuilder::parse).addResultReader(InternalCardinality::new));
+                CardinalityAggregationBuilder::parse).addResultReader(InternalCardinality::new));
         registerAggregation(new SearchPlugin.AggregationSpec(GlobalAggregationBuilder.NAME, GlobalAggregationBuilder::new,
-            GlobalAggregationBuilder::parse).addResultReader(InternalGlobal::new));
+                GlobalAggregationBuilder::parse).addResultReader(InternalGlobal::new));
         registerAggregation(new SearchPlugin.AggregationSpec(MissingAggregationBuilder.NAME, MissingAggregationBuilder::new,
-            MissingAggregationBuilder::parse).addResultReader(InternalMissing::new));
+                MissingAggregationBuilder::parse).addResultReader(InternalMissing::new));
         registerAggregation(new SearchPlugin.AggregationSpec(FilterAggregationBuilder.NAME, FilterAggregationBuilder::new,
-            FilterAggregationBuilder::parse).addResultReader(InternalFilter::new));
+                FilterAggregationBuilder::parse).addResultReader(InternalFilter::new));
         registerAggregation(new SearchPlugin.AggregationSpec(FiltersAggregationBuilder.NAME, FiltersAggregationBuilder::new,
-            FiltersAggregationBuilder::parse).addResultReader(InternalFilters::new));
+                FiltersAggregationBuilder::parse).addResultReader(InternalFilters::new));
         registerAggregation(new SearchPlugin.AggregationSpec(AdjacencyMatrixAggregationBuilder.NAME, AdjacencyMatrixAggregationBuilder::new,
-            AdjacencyMatrixAggregationBuilder::parse).addResultReader(InternalAdjacencyMatrix::new));
+                AdjacencyMatrixAggregationBuilder::parse).addResultReader(InternalAdjacencyMatrix::new));
         registerAggregation(new SearchPlugin.AggregationSpec(SamplerAggregationBuilder.NAME, SamplerAggregationBuilder::new,
-            SamplerAggregationBuilder::parse)
-            .addResultReader(InternalSampler.NAME, InternalSampler::new)
-            .addResultReader(UnmappedSampler.NAME, UnmappedSampler::new));
+                SamplerAggregationBuilder::parse)
+                .addResultReader(InternalSampler.NAME, InternalSampler::new)
+                .addResultReader(UnmappedSampler.NAME, UnmappedSampler::new));
         registerAggregation(new SearchPlugin.AggregationSpec(DiversifiedAggregationBuilder.NAME, DiversifiedAggregationBuilder::new,
-                DiversifiedAggregationBuilder::parse)
-            /* Reuses result readers from SamplerAggregator*/);
+                        DiversifiedAggregationBuilder::parse)
+                /* Reuses result readers from SamplerAggregator*/);
         registerAggregation(new SearchPlugin.AggregationSpec(TermsAggregationBuilder.NAME, TermsAggregationBuilder::new,
-            TermsAggregationBuilder::parse)
-            .addResultReader(StringTerms.NAME, StringTerms::new)
-            .addResultReader(UnmappedTerms.NAME, UnmappedTerms::new)
-            .addResultReader(LongTerms.NAME, LongTerms::new)
-            .addResultReader(DoubleTerms.NAME, DoubleTerms::new));
+                TermsAggregationBuilder::parse)
+                .addResultReader(StringTerms.NAME, StringTerms::new)
+                .addResultReader(UnmappedTerms.NAME, UnmappedTerms::new)
+                .addResultReader(LongTerms.NAME, LongTerms::new)
+                .addResultReader(DoubleTerms.NAME, DoubleTerms::new));
         registerAggregation(new SearchPlugin.AggregationSpec(SignificantTermsAggregationBuilder.NAME, SignificantTermsAggregationBuilder::new,
-            SignificantTermsAggregationBuilder.getParser(significanceHeuristicParserRegistry))
-            .addResultReader(SignificantStringTerms.NAME, SignificantStringTerms::new)
-            .addResultReader(SignificantLongTerms.NAME, SignificantLongTerms::new)
-            .addResultReader(UnmappedSignificantTerms.NAME, UnmappedSignificantTerms::new));
+                SignificantTermsAggregationBuilder.getParser(significanceHeuristicParserRegistry))
+                .addResultReader(SignificantStringTerms.NAME, SignificantStringTerms::new)
+                .addResultReader(SignificantLongTerms.NAME, SignificantLongTerms::new)
+                .addResultReader(UnmappedSignificantTerms.NAME, UnmappedSignificantTerms::new));
         registerAggregation(new SearchPlugin.AggregationSpec(SignificantTextAggregationBuilder.NAME, SignificantTextAggregationBuilder::new,
-            SignificantTextAggregationBuilder.getParser(significanceHeuristicParserRegistry)));
+                SignificantTextAggregationBuilder.getParser(significanceHeuristicParserRegistry)));
         registerAggregation(new SearchPlugin.AggregationSpec(RangeAggregationBuilder.NAME, RangeAggregationBuilder::new,
-            RangeAggregationBuilder::parse).addResultReader(InternalRange::new));
+                RangeAggregationBuilder::parse).addResultReader(InternalRange::new));
         registerAggregation(new SearchPlugin.AggregationSpec(DateRangeAggregationBuilder.NAME, DateRangeAggregationBuilder::new,
-            DateRangeAggregationBuilder::parse).addResultReader(InternalDateRange::new));
+                DateRangeAggregationBuilder::parse).addResultReader(InternalDateRange::new));
         registerAggregation(new SearchPlugin.AggregationSpec(IpRangeAggregationBuilder.NAME, IpRangeAggregationBuilder::new,
-            IpRangeAggregationBuilder::parse).addResultReader(InternalBinaryRange::new));
+                IpRangeAggregationBuilder::parse).addResultReader(InternalBinaryRange::new));
         registerAggregation(new SearchPlugin.AggregationSpec(HistogramAggregationBuilder.NAME, HistogramAggregationBuilder::new,
-            HistogramAggregationBuilder::parse).addResultReader(InternalHistogram::new));
+                HistogramAggregationBuilder::parse).addResultReader(InternalHistogram::new));
         registerAggregation(new SearchPlugin.AggregationSpec(DateHistogramAggregationBuilder.NAME, DateHistogramAggregationBuilder::new,
-            DateHistogramAggregationBuilder::parse).addResultReader(InternalDateHistogram::new));
+                DateHistogramAggregationBuilder::parse).addResultReader(InternalDateHistogram::new));
         registerAggregation(new SearchPlugin.AggregationSpec(GeoDistanceAggregationBuilder.NAME, GeoDistanceAggregationBuilder::new,
-            GeoDistanceAggregationBuilder::parse).addResultReader(InternalGeoDistance::new));
+                GeoDistanceAggregationBuilder::parse).addResultReader(InternalGeoDistance::new));
         registerAggregation(new SearchPlugin.AggregationSpec(GeoGridAggregationBuilder.NAME, GeoGridAggregationBuilder::new,
-            GeoGridAggregationBuilder::parse).addResultReader(InternalGeoHashGrid::new));
+                GeoGridAggregationBuilder::parse).addResultReader(InternalGeoHashGrid::new));
         registerAggregation(new SearchPlugin.AggregationSpec(NestedAggregationBuilder.NAME, NestedAggregationBuilder::new,
-            NestedAggregationBuilder::parse).addResultReader(InternalNested::new));
+                NestedAggregationBuilder::parse).addResultReader(InternalNested::new));
         registerAggregation(new SearchPlugin.AggregationSpec(ReverseNestedAggregationBuilder.NAME, ReverseNestedAggregationBuilder::new,
-            ReverseNestedAggregationBuilder::parse).addResultReader(InternalReverseNested::new));
+                ReverseNestedAggregationBuilder::parse).addResultReader(InternalReverseNested::new));
         registerAggregation(new SearchPlugin.AggregationSpec(TopHitsAggregationBuilder.NAME, TopHitsAggregationBuilder::new,
-            TopHitsAggregationBuilder::parse).addResultReader(InternalTopHits::new));
+                TopHitsAggregationBuilder::parse).addResultReader(InternalTopHits::new));
         registerAggregation(new SearchPlugin.AggregationSpec(GeoBoundsAggregationBuilder.NAME, GeoBoundsAggregationBuilder::new,
-            GeoBoundsAggregationBuilder::parse).addResultReader(InternalGeoBounds::new));
+                GeoBoundsAggregationBuilder::parse).addResultReader(InternalGeoBounds::new));
         registerAggregation(new SearchPlugin.AggregationSpec(GeoCentroidAggregationBuilder.NAME, GeoCentroidAggregationBuilder::new,
-            GeoCentroidAggregationBuilder::parse).addResultReader(InternalGeoCentroid::new));
+                GeoCentroidAggregationBuilder::parse).addResultReader(InternalGeoCentroid::new));
         registerAggregation(new SearchPlugin.AggregationSpec(ScriptedMetricAggregationBuilder.NAME, ScriptedMetricAggregationBuilder::new,
-            ScriptedMetricAggregationBuilder::parse).addResultReader(InternalScriptedMetric::new));
+                ScriptedMetricAggregationBuilder::parse).addResultReader(InternalScriptedMetric::new));
         registerAggregation((new SearchPlugin.AggregationSpec(CompositeAggregationBuilder.NAME, CompositeAggregationBuilder::new,
-            CompositeAggregationBuilder::parse).addResultReader(InternalComposite::new)));
+                CompositeAggregationBuilder::parse).addResultReader(InternalComposite::new)));
         NamedXContentRegistry registry = new NamedXContentRegistry(namedXContents);
 
         XContentParser parser = JsonXContent.jsonXContent.createParser(registry, aggs);
@@ -391,18 +390,16 @@ public class UnitTest {
     private void registerQuery(SearchPlugin.QuerySpec<?> spec) {
         namedWriteables.add(new NamedWriteableRegistry.Entry(QueryBuilder.class, spec.getName().getPreferredName(), spec.getReader()));
         namedXContents.add(new NamedXContentRegistry.Entry(QueryBuilder.class, spec.getName(),
-            (p, c) -> spec.getParser().fromXContent(p)));
+                (p, c) -> spec.getParser().fromXContent(p)));
     }
 
     private void registerAggregation(SearchPlugin.AggregationSpec spec) {
-        if (false == false) {
-            namedXContents.add(new NamedXContentRegistry.Entry(BaseAggregationBuilder.class, spec.getName(), (p, c) -> {
-                AggregatorFactories.AggParseContext context = (AggregatorFactories.AggParseContext) c;
-                return spec.getParser().parse(context.name, p);
-            }));
-        }
+        namedXContents.add(new NamedXContentRegistry.Entry(BaseAggregationBuilder.class, spec.getName(), (p, c) -> {
+            AggregatorFactories.AggParseContext context = (AggregatorFactories.AggParseContext) c;
+            return spec.getParser().parse(context.name, p);
+        }));
         namedWriteables.add(
-            new NamedWriteableRegistry.Entry(AggregationBuilder.class, spec.getName().getPreferredName(), spec.getReader()));
+                new NamedWriteableRegistry.Entry(AggregationBuilder.class, spec.getName().getPreferredName(), spec.getReader()));
         for (Map.Entry<String, Writeable.Reader<? extends InternalAggregation>> t : spec.getResultReaders().entrySet()) {
             String writeableName = t.getKey();
             Writeable.Reader<? extends InternalAggregation> internalReader = t.getValue();
