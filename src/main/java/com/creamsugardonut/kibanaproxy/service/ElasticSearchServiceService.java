@@ -14,6 +14,7 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.util.EntityUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.joda.time.DateTime;
@@ -91,6 +92,7 @@ public class ElasticSearchServiceService {
         List<Map<String, Object>> respes = (List<Map<String, Object>>) map.get("responses");
         for (Map<String, Object> resp : respes) {
             List<DateHistogramBucket> dhbList = new ArrayList<>();
+            BulkRequest br = new BulkRequest();
             Map<String, Object> aggrs = (Map<String, Object>) resp.get("aggregations");
             for (String aggKey : aggrs.keySet()) {
                 System.out.println(aggrs.get(aggKey));
@@ -113,10 +115,11 @@ public class ElasticSearchServiceService {
                         irMap.put("value", JsonUtil.convertAsString(bucket));
                         irMap.put("ts", key);
                         ir.source(irMap);
-                        restClient.index(ir);
+                        br.add(ir);
                     }
                 }
             }
+            restClient.bulk(br);
         }
 
         return res;
