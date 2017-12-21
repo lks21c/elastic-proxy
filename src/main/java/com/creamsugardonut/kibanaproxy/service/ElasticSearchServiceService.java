@@ -1,5 +1,6 @@
 package com.creamsugardonut.kibanaproxy.service;
 
+import com.creamsugardonut.kibanaproxy.util.JsonUtil;
 import com.creamsugardonut.kibanaproxy.vo.DateHistogramBucket;
 import org.apache.http.HttpResponse;
 import org.apache.http.MethodNotSupportedException;
@@ -13,6 +14,8 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.util.EntityUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.elasticsearch.action.index.IndexRequest;
+import org.elasticsearch.client.RestHighLevelClient;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpMethod;
@@ -20,6 +23,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +33,9 @@ public class ElasticSearchServiceService {
     private static final Logger logger = LogManager.getLogger(ElasticSearchServiceService.class);
 
     private CloseableHttpClient client = HttpClientBuilder.create().build();
+
+    @Autowired
+    private RestHighLevelClient restClient;
 
     @Autowired
     private ParsingService parsingService;
@@ -99,6 +106,14 @@ public class ElasticSearchServiceService {
 
                         DateHistogramBucket dhb = new DateHistogramBucket(new DateTime(key), bucket);
                         dhbList.add(dhb);
+
+                        IndexRequest ir = new IndexRequest("cache", "info", key_as_string);
+                        Map<String, Object> irMap = new HashMap<>();
+                        irMap.put("key", key_as_string);
+                        irMap.put("value", JsonUtil.convertAsString(bucket));
+                        irMap.put("ts", key);
+                        ir.source(irMap);
+                        restClient.index(ir);
                     }
                 }
             }

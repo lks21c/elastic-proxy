@@ -20,7 +20,7 @@ public class CacheService {
     private static final Logger logger = LogManager.getLogger(CacheService.class);
 
     @Autowired
-    private ElasticSearchServiceService elasticSearchServiceService;
+    private ElasticSearchServiceService esService;
 
     @Autowired
     private NativeParsingServiceImpl parsingService;
@@ -75,7 +75,7 @@ public class CacheService {
                         || (interval.contains("m") && startDt.getSecondOfMinute() == 0)) {
                     logger.info("cacheable");
 
-                    elasticSearchServiceService.executeQuery("http://alyes.melon.com/_msearch", info);
+                    esService.executeQuery("http://alyes.melon.com/_msearch", info);
                 }
             }
         }
