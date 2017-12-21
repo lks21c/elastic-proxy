@@ -1,7 +1,6 @@
 package com.creamsugardonut.kibanaproxy.service;
 
 import com.creamsugardonut.kibanaproxy.util.JsonUtil;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.http.HttpResponse;
 import org.apache.http.MethodNotSupportedException;
 import org.apache.http.entity.StringEntity;
@@ -10,7 +9,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.RangeQueryBuilder;
 import org.elasticsearch.search.aggregations.AggregationBuilder;
 import org.elasticsearch.search.aggregations.AggregatorFactories;
@@ -32,7 +30,7 @@ public class CacheService {
     private HttpService httpService;
 
     @Autowired
-    private ParsingService parsingService;
+    private NativeParsingServiceImpl parsingService;
 
     public void manipulateQuery(Map<String, Object> map) throws IOException {
         for (String key : map.keySet()) {

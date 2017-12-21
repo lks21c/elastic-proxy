@@ -1,8 +1,7 @@
 package com.creamsugardonut.kibanaproxy;
 
 import com.creamsugardonut.kibanaproxy.service.CacheService;
-import com.creamsugardonut.kibanaproxy.service.ParsingService;
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.creamsugardonut.kibanaproxy.service.NativeParsingServiceImpl;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,7 +15,7 @@ import java.util.Map;
 @SpringBootTest
 public class ParsingServiceTest {
     @Autowired
-    ParsingService parsingService;
+    NativeParsingServiceImpl parsingService;
 
     @Autowired
     CacheService cacheService;

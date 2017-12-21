@@ -2,7 +2,7 @@ package com.creamsugardonut.kibanaproxy;
 
 import com.creamsugardonut.kibanaproxy.service.CacheService;
 import com.creamsugardonut.kibanaproxy.service.HttpService;
-import com.creamsugardonut.kibanaproxy.service.ParsingService;
+import com.creamsugardonut.kibanaproxy.service.NativeParsingServiceImpl;
 import com.netflix.zuul.ZuulFilter;
 import com.netflix.zuul.context.RequestContext;
 import org.apache.commons.lang.StringUtils;
@@ -31,7 +31,7 @@ public class PreFilter extends ZuulFilter {
     HttpService httpService;
 
     @Autowired
-    ParsingService parsingService;
+    NativeParsingServiceImpl parsingService;
 
     @Autowired
     CacheService cacheService;
