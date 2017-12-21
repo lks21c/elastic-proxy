@@ -1,13 +1,16 @@
 package com.creamsugardonut.kibanaproxy.service;
 
 import com.creamsugardonut.kibanaproxy.util.JsonUtil;
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.http.HttpResponse;
 import org.apache.http.MethodNotSupportedException;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.util.EntityUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.elasticsearch.search.aggregations.AggregationBuilder;
+import org.elasticsearch.search.aggregations.AggregatorFactories;
+import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogramAggregationBuilder;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpMethod;
@@ -27,7 +30,9 @@ public class CacheService {
     @Autowired
     private ParsingService parsingService;
 
-    public void manipulateQuery(Map<String, Object> map) throws JsonProcessingException {
+    private ObjectMapper mapper = new ObjectMapper();
+
+    public void manipulateQuery(Map<String, Object> map) throws IOException {
         for (String key : map.keySet()) {
             logger.info("key = " + key);
         }
@@ -56,15 +61,15 @@ public class CacheService {
 
         // Get aggs
         Map<String, Object> aggs = (Map<String, Object>) map.get("aggs");
-        if (aggs.size() == 1) {
-            for (String aggsKey : aggs.keySet()) {
-                Map<String, Object> firstDepthAggs = (Map<String, Object>) aggs.get(aggsKey);
+        AggregatorFactories.Builder af = parsingService.parseAggs(mapper.writeValueAsString(aggs));
 
-                Map<String, Object> date_histogram = (Map<String, Object>) firstDepthAggs.get("date_histogram");
+        if (af.getAggregatorFactories().size() == 1) {
+            for (AggregationBuilder ab : af.getAggregatorFactories()) {
+
                 String interval = null;
-                if (date_histogram != null) {
-                    interval = (String) date_histogram.get("interval");
-                    logger.info("interval = " + interval);
+                if (ab instanceof DateHistogramAggregationBuilder) {
+                    DateHistogramAggregationBuilder dhb = (DateHistogramAggregationBuilder) ab;
+                    interval = dhb.dateHistogramInterval().toString();
                 }
 
                 // Cacheable
