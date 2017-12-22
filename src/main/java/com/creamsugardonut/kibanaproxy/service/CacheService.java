@@ -1,37 +1,30 @@
 package com.creamsugardonut.kibanaproxy.service;
 
+import com.creamsugardonut.kibanaproxy.conts.CacheMode;
+import com.creamsugardonut.kibanaproxy.repository.CacheRepository;
 import com.creamsugardonut.kibanaproxy.util.IndexNameUtil;
 import com.creamsugardonut.kibanaproxy.util.JsonUtil;
 import com.creamsugardonut.kibanaproxy.vo.DateHistogramBucket;
 import org.apache.http.HttpResponse;
 import org.apache.http.MethodNotSupportedException;
-import org.apache.http.util.EntityUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.elasticsearch.action.bulk.BulkRequest;
-import org.elasticsearch.action.index.IndexRequest;
-import org.elasticsearch.action.search.SearchRequest;
-import org.elasticsearch.action.search.SearchResponse;
-import org.elasticsearch.client.RestHighLevelClient;
-import org.elasticsearch.index.query.BoolQueryBuilder;
-import org.elasticsearch.index.query.QueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.aggregations.AggregationBuilder;
 import org.elasticsearch.search.aggregations.AggregatorFactories;
 import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogramAggregationBuilder;
-import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.joda.time.DateTime;
+import org.joda.time.Days;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * @author lks21c
+ */
 @Service
 public class CacheService {
     private static final Logger logger = LogManager.getLogger(CacheService.class);
@@ -40,10 +33,10 @@ public class CacheService {
     private ElasticSearchServiceService esService;
 
     @Autowired
-    private NativeParsingServiceImpl parsingService;
+    private ParsingService parsingService;
 
     @Autowired
-    private RestHighLevelClient restClient;
+    private CacheRepository cacheRepository;
 
     @Value("${zuul.routes.proxy.url}")
     private String esUrl;
@@ -88,87 +81,52 @@ public class CacheService {
         Map<String, Object> aggs = (Map<String, Object>) qMap.get("aggs");
         AggregatorFactories.Builder af = parsingService.parseAggs(JsonUtil.convertAsString(aggs));
 
-        getCache(indexName, JsonUtil.convertAsString(aggs), startDt, endDt);
+        List<DateHistogramBucket> dhbList = cacheRepository.getCache(indexName, JsonUtil.convertAsString(aggs), startDt, endDt);
 
+        // Parse 1 depth aggregation
+        String interval = null;
         if (af.getAggregatorFactories().size() == 1) {
             for (AggregationBuilder ab : af.getAggregatorFactories()) {
 
-                String interval = null;
                 if (ab instanceof DateHistogramAggregationBuilder) {
                     DateHistogramAggregationBuilder dhb = (DateHistogramAggregationBuilder) ab;
                     interval = dhb.dateHistogramInterval().toString();
                 }
+            }
+        }
 
-                // Cacheable
-                if ((interval.contains("d") && startDt.getSecondOfDay() == 0)
-                        || (interval.contains("h") && startDt.getMinuteOfHour() == 0 && startDt.getSecondOfMinute() == 0)
-                        || (interval.contains("m") && startDt.getSecondOfMinute() == 0)) {
-                    logger.info("cacheable");
+        String cacheMode = checkCacheMode(interval, startDt, endDt, dhbList);
+        logger.info("cacheMode = " + cacheMode);
 
-                    HttpResponse res = esService.executeQuery(esUrl + "/_msearch", info);
-                    putCache(res, indexName, JsonUtil.convertAsString(aggs));
-                }
+        if (CacheMode.ALL.equals(cacheMode)) {
+
+        } else {
+            // Cacheable
+            if ((interval.contains("d") && startDt.getSecondOfDay() == 0)
+                    || (interval.contains("h") && startDt.getMinuteOfHour() == 0 && startDt.getSecondOfMinute() == 0)
+                    || (interval.contains("m") && startDt.getSecondOfMinute() == 0)) {
+                logger.info("cacheable");
+
+                HttpResponse res = esService.executeQuery(esUrl + "/_msearch", info);
+                cacheRepository.putCache(res, indexName, JsonUtil.convertAsString(aggs));
             }
         }
     }
 
-    private List<DateHistogramBucket> getCache(String indexName, String agg, DateTime startDt, DateTime endDt) throws IOException {
-        String key = indexName + agg;
+    private String checkCacheMode(String interval, DateTime startDt, DateTime endDt, List<DateHistogramBucket> dhbList) {
+        int startTimeFirstCacheGap = -1;
 
-        List<QueryBuilder> qbList = new ArrayList<>();
-        qbList.add(QueryBuilders.termQuery("key", key));
-        qbList.add(QueryBuilders.rangeQuery("ts").from(startDt).to(endDt));
-
-        BoolQueryBuilder bq = QueryBuilders.boolQuery();
-        bq.must().addAll(qbList);
-
-        SearchSourceBuilder sb = new SearchSourceBuilder();
-        sb.query(bq);
-
-        SearchRequest srch = new SearchRequest();
-        srch.source(sb);
-
-        logger.info("srch = " + sb.toString());
-        SearchResponse sr = restClient.search(srch);
-
-        logger.info("getCache = " + sr.toString());
-
-        return null;
-    }
-
-    private void putCache(HttpResponse res, String indexName, String agg) throws IOException {
-        String key = indexName + agg;
-        Map<String, Object> resMap = parsingService.parseXContent(EntityUtils.toString(res.getEntity()));
-        List<Map<String, Object>> respes = (List<Map<String, Object>>) resMap.get("responses");
-        for (Map<String, Object> resp : respes) {
-            List<DateHistogramBucket> dhbList = new ArrayList<>();
-            BulkRequest br = new BulkRequest();
-            Map<String, Object> aggrs = (Map<String, Object>) resp.get("aggregations");
-            for (String aggKey : aggrs.keySet()) {
-                logger.info(aggrs.get(aggKey));
-
-                LinkedHashMap<String, Object> buckets = (LinkedHashMap<String, Object>) aggrs.get(aggKey);
-
-                for (String bucketsKey : buckets.keySet()) {
-                    List<Map<String, Object>> bucketList = (List<Map<String, Object>>) buckets.get(bucketsKey);
-                    for (Map<String, Object> bucket : bucketList) {
-                        String key_as_string = (String) bucket.get("key_as_string");
-                        Long ts = (Long) bucket.get("key");
-                        logger.info("key_as_string = " + key_as_string);
-
-                        DateHistogramBucket dhb = new DateHistogramBucket(new DateTime(ts), bucket);
-                        dhbList.add(dhb);
-
-                        IndexRequest ir = new IndexRequest("cache", "info", key + "_" + ts);
-                        Map<String, Object> irMap = new HashMap<>();
-                        irMap.put("value", JsonUtil.convertAsString(bucket));
-                        irMap.put("ts", ts);
-                        ir.source(irMap);
-                        br.add(ir);
-                    }
-                }
-            }
-            restClient.bulk(br);
+        if (dhbList.size() > 0) {
+            startTimeFirstCacheGap = Days.daysBetween(startDt, dhbList.get(0).getDate()).getDays();
         }
+
+        if ("1d".equals(interval)) {
+            if (Days.daysBetween(startDt, endDt).getDays() + 1 == dhbList.size()) {
+                return CacheMode.ALL;
+            } else if (dhbList.size() > 0 && startTimeFirstCacheGap == 0) {
+                return CacheMode.PARTIAL;
+            }
+        }
+        return CacheMode.NOCACHE;
     }
 }

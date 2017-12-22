@@ -1,12 +1,17 @@
 package com.creamsugardonut.kibanaproxy.repository;
 
-import java.util.Map;
+import com.creamsugardonut.kibanaproxy.vo.DateHistogramBucket;
+import org.apache.http.HttpResponse;
+import org.joda.time.DateTime;
 
+import java.io.IOException;
+import java.util.List;
+
+/**
+ * @author lks21c
+ */
 public interface CacheRepository {
-    public static final String CACHE_KEY = "cache";
+    public List<DateHistogramBucket> getCache(String indexName, String agg, DateTime startDt, DateTime endDt) throws IOException;
 
-    public void setCache(String key, int year
-            , int month, Integer day, int hour, int minute, String query, Map<String, Object> cachePeriod);
-
-    public Map<String, Object> getCache(String key, int year, int month, Integer day, int hour, int minute, String query);
+    public void putCache(HttpResponse res, String indexName, String agg) throws IOException;
 }

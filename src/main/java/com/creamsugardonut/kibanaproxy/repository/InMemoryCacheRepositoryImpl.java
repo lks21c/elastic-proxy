@@ -4,11 +4,12 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.CacheManager;
-import org.springframework.stereotype.Service;
 
 import java.util.Map;
 
-
+/**
+ * @author lks21c
+ */
 public class InMemoryCacheRepositoryImpl {
     private Logger logger = LogManager.getLogger(InMemoryCacheRepositoryImpl.class);
 

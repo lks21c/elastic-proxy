@@ -14,4 +14,20 @@ public class DateHistogramBucket {
         this.date = dateTime;
         this.bucket = bucket;
     }
+
+    public DateTime getDate() {
+        return date;
+    }
+
+    public void setDate(DateTime date) {
+        this.date = date;
+    }
+
+    public Map<String, Object> getBucket() {
+        return bucket;
+    }
+
+    public void setBucket(Map<String, Object> bucket) {
+        this.bucket = bucket;
+    }
 }

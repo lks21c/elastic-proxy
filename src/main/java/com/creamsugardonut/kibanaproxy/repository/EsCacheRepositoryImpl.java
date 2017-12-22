@@ -1,18 +1,120 @@
 package com.creamsugardonut.kibanaproxy.repository;
 
+import com.creamsugardonut.kibanaproxy.service.CacheService;
+import com.creamsugardonut.kibanaproxy.service.NativeParsingServiceImpl;
+import com.creamsugardonut.kibanaproxy.service.ParsingService;
+import com.creamsugardonut.kibanaproxy.util.JsonUtil;
+import com.creamsugardonut.kibanaproxy.vo.DateHistogramBucket;
+import com.google.gson.Gson;
+import org.apache.http.HttpResponse;
+import org.apache.http.util.EntityUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.elasticsearch.action.bulk.BulkRequest;
+import org.elasticsearch.action.index.IndexRequest;
+import org.elasticsearch.action.search.SearchRequest;
+import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.QueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.search.SearchHit;
+import org.elasticsearch.search.aggregations.Aggregation;
+import org.elasticsearch.search.builder.SearchSourceBuilder;
+import org.elasticsearch.search.sort.SortOrder;
+import org.joda.time.DateTime;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
+/**
+ * @author lks21c
+ */
 @Service
 public class EsCacheRepositoryImpl implements CacheRepository {
-    @Override
-    public void setCache(String key, int year, int month, Integer day, int hour, int minute, String query, Map<String, Object> cachePeriod) {
+    private static final Logger logger = LogManager.getLogger(EsCacheRepositoryImpl.class);
 
+    @Autowired
+    private RestHighLevelClient restClient;
+
+    @Autowired
+    private ParsingService parsingService;
+
+    @Override
+    public List<DateHistogramBucket> getCache(String indexName, String agg, DateTime startDt, DateTime endDt) throws IOException {
+        String key = indexName + agg;
+
+        List<QueryBuilder> qbList = new ArrayList<>();
+        qbList.add(QueryBuilders.termQuery("key", key));
+        qbList.add(QueryBuilders.rangeQuery("ts").from(startDt).to(endDt));
+
+        BoolQueryBuilder bq = QueryBuilders.boolQuery();
+        bq.must().addAll(qbList);
+
+        SearchSourceBuilder sb = new SearchSourceBuilder();
+        sb.query(bq);
+        sb.sort("ts", SortOrder.ASC);
+
+        SearchRequest srch = new SearchRequest().indices("cache").types("info");
+        srch.source(sb);
+
+        logger.info("srch = " + sb.toString());
+        SearchResponse sr = restClient.search(srch);
+        logger.info("sr = " + sr.toString());
+
+        List<DateHistogramBucket> dhbList = new ArrayList<>();
+        for (SearchHit hit : sr.getHits().getHits()) {
+            Map<String, Object> source = hit.getSourceAsMap();
+            Long ts = (Long) source.get("ts");
+            String value = (String) source.get("value");
+            Map<String, Object> bucket = new Gson().fromJson(value, HashMap.class);
+            dhbList.add(new DateHistogramBucket(new DateTime(ts), bucket));
+        }
+
+        return dhbList;
     }
 
     @Override
-    public Map<String, Object> getCache(String key, int year, int month, Integer day, int hour, int minute, String query) {
-        return null;
+    public void putCache(HttpResponse res, String indexName, String agg) throws IOException {
+        String key = indexName + agg;
+        Map<String, Object> resMap = parsingService.parseXContent(EntityUtils.toString(res.getEntity()));
+        List<Map<String, Object>> respes = (List<Map<String, Object>>) resMap.get("responses");
+        for (Map<String, Object> resp : respes) {
+            List<DateHistogramBucket> dhbList = new ArrayList<>();
+            BulkRequest br = new BulkRequest();
+            Map<String, Object> aggrs = (Map<String, Object>) resp.get("aggregations");
+            for (String aggKey : aggrs.keySet()) {
+                logger.info(aggrs.get(aggKey));
+
+                LinkedHashMap<String, Object> buckets = (LinkedHashMap<String, Object>) aggrs.get(aggKey);
+
+                for (String bucketsKey : buckets.keySet()) {
+                    List<Map<String, Object>> bucketList = (List<Map<String, Object>>) buckets.get(bucketsKey);
+                    for (Map<String, Object> bucket : bucketList) {
+                        String key_as_string = (String) bucket.get("key_as_string");
+                        Long ts = (Long) bucket.get("key");
+                        logger.info("key_as_string = " + key_as_string);
+
+                        DateHistogramBucket dhb = new DateHistogramBucket(new DateTime(ts), bucket);
+                        dhbList.add(dhb);
+
+                        IndexRequest ir = new IndexRequest("cache", "info", key + "_" + ts);
+                        Map<String, Object> irMap = new HashMap<>();
+                        irMap.put("value", JsonUtil.convertAsString(bucket));
+                        irMap.put("key", key);
+                        irMap.put("ts", ts);
+                        ir.source(irMap);
+                        br.add(ir);
+                    }
+                }
+            }
+            restClient.bulk(br);
+        }
     }
 }
