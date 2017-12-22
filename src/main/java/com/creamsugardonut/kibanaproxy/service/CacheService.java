@@ -7,6 +7,7 @@ import com.creamsugardonut.kibanaproxy.util.JsonUtil;
 import com.creamsugardonut.kibanaproxy.vo.DateHistogramBucket;
 import org.apache.http.HttpResponse;
 import org.apache.http.MethodNotSupportedException;
+import org.apache.http.util.EntityUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.elasticsearch.search.aggregations.AggregationBuilder;
@@ -41,7 +42,7 @@ public class CacheService {
     @Value("${zuul.routes.proxy.url}")
     private String esUrl;
 
-    public void manipulateQuery(String info) throws IOException, MethodNotSupportedException {
+    public String manipulateQuery(String info) throws IOException, MethodNotSupportedException {
         logger.info("info = " + info);
 
         String[] arr = info.split("\n");
@@ -77,6 +78,8 @@ public class CacheService {
             }
         }
 
+        logger.info("invoked here");
+
         // Get aggs
         Map<String, Object> aggs = (Map<String, Object>) qMap.get("aggs");
         AggregatorFactories.Builder af = parsingService.parseAggs(JsonUtil.convertAsString(aggs));
@@ -95,11 +98,48 @@ public class CacheService {
             }
         }
 
+        logger.info("interval = " + interval);
+
         String cacheMode = checkCacheMode(interval, startDt, endDt, dhbList);
         logger.info("cacheMode = " + cacheMode);
 
         if (CacheMode.ALL.equals(cacheMode)) {
+            String res = "{\n" +
+                    "  \"responses\": [\n" +
+                    "    {\n" +
+                    "      \"took\": 3,\n" +
+                    "      \"timed_out\": false,\n" +
+                    "      \"_shards\": {\n" +
+                    "        \"total\": 55,\n" +
+                    "        \"successful\": 55,\n" +
+                    "        \"failed\": 0\n" +
+                    "      },\n" +
+                    "      \"hits\": {\n" +
+                    "        \"total\": 2718971,\n" +
+                    "        \"max_score\": 0,\n" +
+                    "        \"hits\": []\n" +
+                    "      },\n" +
+                    "      \"aggregations\": {\n" +
+                    "        \"2\": {\n" +
+                    "          \"buckets\": \n";
 
+            res += JsonUtil.convertAsString(dhbList);
+
+            res += "            \n" +
+                    "        }\n" +
+                    "      },\n" +
+                    "      \"status\": 200\n" +
+                    "    }\n" +
+                    "  ]\n" +
+                    "}";
+
+            logger.info("final res = " + res);
+
+            /* 임시 */
+            esService.executeQuery(esUrl + "/_msearch", info);
+            /* 임시 */
+
+            return res;
         } else {
             // Cacheable
             if ((interval.contains("d") && startDt.getSecondOfDay() == 0)
@@ -108,9 +148,12 @@ public class CacheService {
                 logger.info("cacheable");
 
                 HttpResponse res = esService.executeQuery(esUrl + "/_msearch", info);
-                cacheRepository.putCache(res, indexName, JsonUtil.convertAsString(aggs));
+                cacheRepository.putCache(res, indexName, JsonUtil.convertAsString(aggs), interval);
+                return EntityUtils.toString(res.getEntity());
             }
         }
+
+        return null;
     }
 
     private String checkCacheMode(String interval, DateTime startDt, DateTime endDt, List<DateHistogramBucket> dhbList) {

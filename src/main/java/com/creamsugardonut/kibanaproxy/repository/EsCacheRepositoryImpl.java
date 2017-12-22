@@ -1,7 +1,5 @@
 package com.creamsugardonut.kibanaproxy.repository;
 
-import com.creamsugardonut.kibanaproxy.service.CacheService;
-import com.creamsugardonut.kibanaproxy.service.NativeParsingServiceImpl;
 import com.creamsugardonut.kibanaproxy.service.ParsingService;
 import com.creamsugardonut.kibanaproxy.util.JsonUtil;
 import com.creamsugardonut.kibanaproxy.vo.DateHistogramBucket;
@@ -19,10 +17,10 @@ import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
-import org.elasticsearch.search.aggregations.Aggregation;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.sort.SortOrder;
 import org.joda.time.DateTime;
+import org.joda.time.Days;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -48,6 +46,7 @@ public class EsCacheRepositoryImpl implements CacheRepository {
 
     @Override
     public List<DateHistogramBucket> getCache(String indexName, String agg, DateTime startDt, DateTime endDt) throws IOException {
+        logger.info("get cache");
         String key = indexName + agg;
 
         List<QueryBuilder> qbList = new ArrayList<>();
@@ -81,7 +80,7 @@ public class EsCacheRepositoryImpl implements CacheRepository {
     }
 
     @Override
-    public void putCache(HttpResponse res, String indexName, String agg) throws IOException {
+    public void putCache(HttpResponse res, String indexName, String agg, String interval) throws IOException {
         String key = indexName + agg;
         Map<String, Object> resMap = parsingService.parseXContent(EntityUtils.toString(res.getEntity()));
         List<Map<String, Object>> respes = (List<Map<String, Object>>) resMap.get("responses");
@@ -101,16 +100,22 @@ public class EsCacheRepositoryImpl implements CacheRepository {
                         Long ts = (Long) bucket.get("key");
                         logger.info("key_as_string = " + key_as_string);
 
-                        DateHistogramBucket dhb = new DateHistogramBucket(new DateTime(ts), bucket);
-                        dhbList.add(dhb);
+                        if ("1d".equals(interval)) {
+                            if (Days.daysBetween(new DateTime(ts), new DateTime())
+                                    .isGreaterThan(Days.days(0))) { /* 과거 ~ 오늘전까지만 캐시 */
 
-                        IndexRequest ir = new IndexRequest("cache", "info", key + "_" + ts);
-                        Map<String, Object> irMap = new HashMap<>();
-                        irMap.put("value", JsonUtil.convertAsString(bucket));
-                        irMap.put("key", key);
-                        irMap.put("ts", ts);
-                        ir.source(irMap);
-                        br.add(ir);
+                                DateHistogramBucket dhb = new DateHistogramBucket(new DateTime(ts), bucket);
+                                dhbList.add(dhb);
+
+                                IndexRequest ir = new IndexRequest("cache", "info", key + "_" + ts);
+                                Map<String, Object> irMap = new HashMap<>();
+                                irMap.put("value", JsonUtil.convertAsString(bucket));
+                                irMap.put("key", key);
+                                irMap.put("ts", ts);
+                                ir.source(irMap);
+                                br.add(ir);
+                            }
+                        }
                     }
                 }
             }

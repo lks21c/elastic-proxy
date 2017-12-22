@@ -9,6 +9,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.util.EntityUtils;
+import org.elasticsearch.action.search.SearchResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -102,12 +103,12 @@ public class PreFilter extends ZuulFilter {
 
                     // Invokes query
                     logger.info("invokeinvoke");
-                    HttpResponse res = esService.executeQuery(targetUrl, reqBody);
-                    logger.info("res = " + EntityUtils.toString(res.getEntity()));
 //
+                    String resBody = cacheService.manipulateQuery(reqBody);
+
                     // Intercepts response and cancels the original request.
-                    if (res.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
-                        ctx.setResponseBody(EntityUtils.toString(res.getEntity()));
+                    if (!StringUtils.isEmpty(resBody)) {
+                        ctx.setResponseBody(resBody);
                         ctx.setSendZuulResponse(false);
                     }
                 }
