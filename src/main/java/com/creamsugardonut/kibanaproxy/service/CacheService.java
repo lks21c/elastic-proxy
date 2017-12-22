@@ -9,10 +9,16 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.index.IndexRequest;
+import org.elasticsearch.action.search.SearchRequest;
+import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.QueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.aggregations.AggregationBuilder;
 import org.elasticsearch.search.aggregations.AggregatorFactories;
 import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogramAggregationBuilder;
+import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -42,17 +48,22 @@ public class CacheService {
     private String esUrl;
 
     public void manipulateQuery(String info) throws IOException, MethodNotSupportedException {
+        logger.info("info = " + info);
 
         String[] arr = info.split("\n");
-        Map<String, Object> map = parsingService.parseXContent(arr[1]);
+        Map<String, Object> iMap = parsingService.parseXContent(arr[0]);
+        Map<String, Object> qMap = parsingService.parseXContent(arr[1]);
 
-        for (String key : map.keySet()) {
+        List<String> idl = (List<String>) iMap.get("index");
+        String indexName = idl.get(0);
+
+        for (String key : qMap.keySet()) {
             logger.info("key = " + key);
         }
 
         // Get gte, lte
         DateTime startDt = null, endDt = null;
-        Map<String, Object> query = (Map<String, Object>) map.get("query");
+        Map<String, Object> query = (Map<String, Object>) qMap.get("query");
         Map<String, Object> bool = (Map<String, Object>) query.get("bool");
         List<Map<String, Object>> must = (List<Map<String, Object>>) bool.get("must");
 
@@ -73,8 +84,10 @@ public class CacheService {
         }
 
         // Get aggs
-        Map<String, Object> aggs = (Map<String, Object>) map.get("aggs");
+        Map<String, Object> aggs = (Map<String, Object>) qMap.get("aggs");
         AggregatorFactories.Builder af = parsingService.parseAggs(JsonUtil.convertAsString(aggs));
+
+        getCache(indexName, JsonUtil.convertAsString(aggs), JsonUtil.convertAsString(query), startDt, endDt);
 
         if (af.getAggregatorFactories().size() == 1) {
             for (AggregationBuilder ab : af.getAggregatorFactories()) {
@@ -92,13 +105,38 @@ public class CacheService {
                     logger.info("cacheable");
 
                     HttpResponse res = esService.executeQuery(esUrl + "/_msearch", info);
-                    putCache(res);
+                    putCache(res, indexName, JsonUtil.convertAsString(aggs), JsonUtil.convertAsString(query));
                 }
             }
         }
     }
 
-    private void putCache(HttpResponse res) throws IOException {
+    private List<DateHistogramBucket> getCache(String indexName, String agg, String query, DateTime startDt, DateTime endDt) throws IOException {
+        String key = indexName + agg + query;
+
+        List<QueryBuilder> qbList = new ArrayList<>();
+        qbList.add(QueryBuilders.termQuery("key", key));
+        qbList.add(QueryBuilders.rangeQuery("ts").from(startDt).to(endDt));
+
+        BoolQueryBuilder bq = QueryBuilders.boolQuery();
+        bq.must().addAll(qbList);
+
+        SearchSourceBuilder sb = new SearchSourceBuilder();
+        sb.query(bq);
+
+        SearchRequest srch = new SearchRequest();
+        srch.source(sb);
+
+        logger.info("srch = " + sb.toString());
+        SearchResponse sr = restClient.search(srch);
+
+        logger.info("getCache = " + sr.toString());
+
+        return null;
+    }
+
+    private void putCache(HttpResponse res, String indexName, String agg, String query) throws IOException {
+        String key = indexName + agg + query;
         Map<String, Object> resMap = parsingService.parseXContent(EntityUtils.toString(res.getEntity()));
         List<Map<String, Object>> respes = (List<Map<String, Object>>) resMap.get("responses");
         for (Map<String, Object> resp : respes) {
@@ -114,17 +152,17 @@ public class CacheService {
                     List<Map<String, Object>> bucketList = (List<Map<String, Object>>) buckets.get(bucketsKey);
                     for (Map<String, Object> bucket : bucketList) {
                         String key_as_string = (String) bucket.get("key_as_string");
-                        Long key = (Long) bucket.get("key");
+                        Long ts = (Long) bucket.get("key");
                         logger.info("key_as_string = " + key_as_string);
 
-                        DateHistogramBucket dhb = new DateHistogramBucket(new DateTime(key), bucket);
+                        DateHistogramBucket dhb = new DateHistogramBucket(new DateTime(ts), bucket);
                         dhbList.add(dhb);
 
-                        IndexRequest ir = new IndexRequest("cache", "info", key_as_string);
+                        IndexRequest ir = new IndexRequest("cache", "info", key + "_" + key_as_string);
                         Map<String, Object> irMap = new HashMap<>();
-                        irMap.put("key", key_as_string);
+                        irMap.put("key", key);
                         irMap.put("value", JsonUtil.convertAsString(bucket));
-                        irMap.put("ts", key);
+                        irMap.put("ts", ts);
                         ir.source(irMap);
                         br.add(ir);
                     }

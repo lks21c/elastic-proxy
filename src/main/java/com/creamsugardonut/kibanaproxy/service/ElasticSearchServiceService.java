@@ -80,6 +80,7 @@ public class ElasticSearchServiceService {
 
     public HttpResponse executeQuery(String targetUrl, String reqBody) throws IOException, MethodNotSupportedException {
         logger.info("executeQuery");
+        logger.info(targetUrl);
         logger.info(reqBody);
 
         HttpResponse res = executeHttpRequest(HttpMethod.POST, targetUrl, new StringEntity(reqBody));

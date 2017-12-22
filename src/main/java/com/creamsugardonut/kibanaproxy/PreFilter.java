@@ -79,7 +79,7 @@ public class PreFilter extends ZuulFilter {
             } else {
                 url = request.getRequestURI().replace("/" + PROXY, "");
             }
-            String targetUrl = esUrl + "/" + url;
+            String targetUrl = esUrl + url;
             logger.info("request = " + targetUrl);
 
             if ("POST".equals(request.getMethod())) {
@@ -103,7 +103,8 @@ public class PreFilter extends ZuulFilter {
                     // Invokes query
                     logger.info("invokeinvoke");
                     HttpResponse res = esService.executeQuery(targetUrl, reqBody);
-
+                    logger.info("res = " + EntityUtils.toString(res.getEntity()));
+//
                     // Intercepts response and cancels the original request.
                     if (res.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
                         ctx.setResponseBody(EntityUtils.toString(res.getEntity()));
