@@ -85,6 +85,7 @@ public class EsCacheRepositoryImpl implements CacheRepository {
         String key = indexName + agg;
         Map<String, Object> resMap = null;
         try {
+            logger.info("before res map");
             resMap = parsingService.parseXContent(res);
             logger.info("resMap = " + JsonUtil.convertAsString(resMap));
         } catch (Exception e) {
