@@ -150,7 +150,8 @@ public class CacheService {
                 logger.info("cacheable");
 
                 HttpResponse res = esService.executeQuery(esUrl + "/_msearch", info);
-                cacheRepository.putCache(res, indexName, JsonUtil.convertAsString(aggs), interval);
+                String entity = EntityUtils.toString(res.getEntity());
+                cacheRepository.putCache(entity, indexName, JsonUtil.convertAsString(aggs), interval);
                 return EntityUtils.toString(res.getEntity());
             }
         }

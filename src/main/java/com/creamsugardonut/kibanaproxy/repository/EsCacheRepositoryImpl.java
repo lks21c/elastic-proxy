@@ -3,6 +3,7 @@ package com.creamsugardonut.kibanaproxy.repository;
 import com.creamsugardonut.kibanaproxy.service.ParsingService;
 import com.creamsugardonut.kibanaproxy.util.JsonUtil;
 import com.creamsugardonut.kibanaproxy.vo.DateHistogramBucket;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.gson.Gson;
 import org.apache.http.HttpResponse;
 import org.apache.http.util.EntityUtils;
@@ -46,8 +47,8 @@ public class EsCacheRepositoryImpl implements CacheRepository {
 
     @Override
     public List<DateHistogramBucket> getCache(String indexName, String agg, DateTime startDt, DateTime endDt) throws IOException {
-        logger.info("get cache");
         String key = indexName + agg;
+        logger.info("get cache " + key);
 
         List<QueryBuilder> qbList = new ArrayList<>();
         qbList.add(QueryBuilders.termQuery("key", key));
@@ -80,16 +81,23 @@ public class EsCacheRepositoryImpl implements CacheRepository {
     }
 
     @Override
-    public void putCache(HttpResponse res, String indexName, String agg, String interval) throws IOException {
+    public void putCache(String res, String indexName, String agg, String interval) throws JsonProcessingException {
         String key = indexName + agg;
-        Map<String, Object> resMap = parsingService.parseXContent(EntityUtils.toString(res.getEntity()));
+        Map<String, Object> resMap = null;
+        try {
+            resMap = parsingService.parseXContent(res);
+            logger.info("resMap = " + JsonUtil.convertAsString(resMap));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
         List<Map<String, Object>> respes = (List<Map<String, Object>>) resMap.get("responses");
         for (Map<String, Object> resp : respes) {
             List<DateHistogramBucket> dhbList = new ArrayList<>();
             BulkRequest br = new BulkRequest();
             Map<String, Object> aggrs = (Map<String, Object>) resp.get("aggregations");
             for (String aggKey : aggrs.keySet()) {
-                logger.info(aggrs.get(aggKey));
+                logger.info("aggKey = " + aggrs.get(aggKey));
 
                 LinkedHashMap<String, Object> buckets = (LinkedHashMap<String, Object>) aggrs.get(aggKey);
 
@@ -98,7 +106,7 @@ public class EsCacheRepositoryImpl implements CacheRepository {
                     for (Map<String, Object> bucket : bucketList) {
                         String key_as_string = (String) bucket.get("key_as_string");
                         Long ts = (Long) bucket.get("key");
-                        logger.info("key_as_string = " + key_as_string);
+                        logger.info("for key_as_string = " + key_as_string);
 
                         if ("1d".equals(interval)) {
                             if (Days.daysBetween(new DateTime(ts), new DateTime())
@@ -107,6 +115,7 @@ public class EsCacheRepositoryImpl implements CacheRepository {
                                 DateHistogramBucket dhb = new DateHistogramBucket(new DateTime(ts), bucket);
                                 dhbList.add(dhb);
 
+                                logger.info("put cache " + key + "_" + ts);
                                 IndexRequest ir = new IndexRequest("cache", "info", key + "_" + ts);
                                 Map<String, Object> irMap = new HashMap<>();
                                 irMap.put("value", JsonUtil.convertAsString(bucket));
@@ -119,7 +128,11 @@ public class EsCacheRepositoryImpl implements CacheRepository {
                     }
                 }
             }
-            restClient.bulk(br);
+            try {
+                restClient.bulk(br);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 }
