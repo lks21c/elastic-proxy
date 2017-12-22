@@ -15,6 +15,7 @@ import org.elasticsearch.search.aggregations.AggregatorFactories;
 import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogramAggregationBuilder;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -36,6 +37,9 @@ public class CacheService {
 
     @Autowired
     private RestHighLevelClient restClient;
+
+    @Value("${zuul.routes.proxy.url}")
+    private String esUrl;
 
     public void manipulateQuery(String info) throws IOException, MethodNotSupportedException {
 
@@ -87,7 +91,7 @@ public class CacheService {
                         || (interval.contains("m") && startDt.getSecondOfMinute() == 0)) {
                     logger.info("cacheable");
 
-                    HttpResponse res = esService.executeQuery("http://alyes.melon.com/_msearch", info);
+                    HttpResponse res = esService.executeQuery(esUrl + "/_msearch", info);
                     putCache(res);
                 }
             }
