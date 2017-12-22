@@ -1,5 +1,6 @@
 package com.creamsugardonut.kibanaproxy.service;
 
+import com.creamsugardonut.kibanaproxy.util.IndexNameUtil;
 import com.creamsugardonut.kibanaproxy.util.JsonUtil;
 import com.creamsugardonut.kibanaproxy.vo.DateHistogramBucket;
 import org.apache.http.HttpResponse;
@@ -55,7 +56,7 @@ public class CacheService {
         Map<String, Object> qMap = parsingService.parseXContent(arr[1]);
 
         List<String> idl = (List<String>) iMap.get("index");
-        String indexName = idl.get(0);
+        String indexName = IndexNameUtil.getIndexName(idl);
 
         for (String key : qMap.keySet()) {
             logger.info("key = " + key);
@@ -87,7 +88,7 @@ public class CacheService {
         Map<String, Object> aggs = (Map<String, Object>) qMap.get("aggs");
         AggregatorFactories.Builder af = parsingService.parseAggs(JsonUtil.convertAsString(aggs));
 
-        getCache(indexName, JsonUtil.convertAsString(aggs), JsonUtil.convertAsString(query), startDt, endDt);
+        getCache(indexName, JsonUtil.convertAsString(aggs), startDt, endDt);
 
         if (af.getAggregatorFactories().size() == 1) {
             for (AggregationBuilder ab : af.getAggregatorFactories()) {
@@ -105,14 +106,14 @@ public class CacheService {
                     logger.info("cacheable");
 
                     HttpResponse res = esService.executeQuery(esUrl + "/_msearch", info);
-                    putCache(res, indexName, JsonUtil.convertAsString(aggs), JsonUtil.convertAsString(query));
+                    putCache(res, indexName, JsonUtil.convertAsString(aggs));
                 }
             }
         }
     }
 
-    private List<DateHistogramBucket> getCache(String indexName, String agg, String query, DateTime startDt, DateTime endDt) throws IOException {
-        String key = indexName + agg + query;
+    private List<DateHistogramBucket> getCache(String indexName, String agg, DateTime startDt, DateTime endDt) throws IOException {
+        String key = indexName + agg;
 
         List<QueryBuilder> qbList = new ArrayList<>();
         qbList.add(QueryBuilders.termQuery("key", key));
@@ -135,8 +136,8 @@ public class CacheService {
         return null;
     }
 
-    private void putCache(HttpResponse res, String indexName, String agg, String query) throws IOException {
-        String key = indexName + agg + query;
+    private void putCache(HttpResponse res, String indexName, String agg) throws IOException {
+        String key = indexName + agg;
         Map<String, Object> resMap = parsingService.parseXContent(EntityUtils.toString(res.getEntity()));
         List<Map<String, Object>> respes = (List<Map<String, Object>>) resMap.get("responses");
         for (Map<String, Object> resp : respes) {
@@ -158,9 +159,8 @@ public class CacheService {
                         DateHistogramBucket dhb = new DateHistogramBucket(new DateTime(ts), bucket);
                         dhbList.add(dhb);
 
-                        IndexRequest ir = new IndexRequest("cache", "info", key + "_" + key_as_string);
+                        IndexRequest ir = new IndexRequest("cache", "info", key + "_" + ts);
                         Map<String, Object> irMap = new HashMap<>();
-                        irMap.put("key", key);
                         irMap.put("value", JsonUtil.convertAsString(bucket));
                         irMap.put("ts", ts);
                         ir.source(irMap);

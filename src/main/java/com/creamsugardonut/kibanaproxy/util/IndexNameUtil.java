@@ -1,0 +1,13 @@
+package com.creamsugardonut.kibanaproxy.util;
+
+import java.util.List;
+
+/**
+ * @author lks21c
+ */
+public class IndexNameUtil {
+    public static String getIndexName(List<String> idl) {
+        String indexName = idl.get(0);
+        return indexName;
+    }
+}
