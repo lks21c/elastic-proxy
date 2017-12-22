@@ -79,7 +79,7 @@ public class PreFilter extends ZuulFilter {
             } else {
                 url = request.getRequestURI().replace("/" + PROXY, "");
             }
-            String targetUrl = esUrl + url;
+            String targetUrl = esUrl + "/" + url;
             logger.info("request = " + targetUrl);
 
             if ("POST".equals(request.getMethod())) {
