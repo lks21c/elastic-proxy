@@ -82,23 +82,25 @@ public class CacheService {
 
         // Get aggs
         Map<String, Object> aggs = (Map<String, Object>) qMap.get("aggs");
-        AggregatorFactories.Builder af = parsingService.parseAggs(JsonUtil.convertAsString(aggs));
+
 
         List<DateHistogramBucket> dhbList = cacheRepository.getCache(indexName, JsonUtil.convertAsString(aggs), startDt, endDt);
 
         // Parse 1 depth aggregation
+        // Get aggs
         String interval = null;
-        if (af.getAggregatorFactories().size() == 1) {
-            for (AggregationBuilder ab : af.getAggregatorFactories()) {
+        if (aggs.size() == 1) {
+            for (String aggsKey : aggs.keySet()) {
+                Map<String, Object> firstDepthAggs = (Map<String, Object>) aggs.get(aggsKey);
 
-                if (ab instanceof DateHistogramAggregationBuilder) {
-                    DateHistogramAggregationBuilder dhb = (DateHistogramAggregationBuilder) ab;
-                    interval = dhb.dateHistogramInterval().toString();
+                Map<String, Object> date_histogram = (Map<String, Object>) firstDepthAggs.get("date_histogram");
+
+                if (date_histogram != null) {
+                    interval = (String) date_histogram.get("interval");
+                    logger.info("interval = " + interval);
                 }
             }
         }
-
-        logger.info("interval = " + interval);
 
         String cacheMode = checkCacheMode(interval, startDt, endDt, dhbList);
         logger.info("cacheMode = " + cacheMode);
