@@ -36,9 +36,6 @@ public class ElasticSearchServiceService {
     private CloseableHttpClient client = HttpClientBuilder.create().build();
 
     @Autowired
-    private RestHighLevelClient restClient;
-
-    @Autowired
     private ParsingService parsingService;
 
     public HttpResponse executeHttpRequest(HttpMethod requestType, String url, StringEntity entity) throws IOException, MethodNotSupportedException {
@@ -86,42 +83,6 @@ public class ElasticSearchServiceService {
         logger.info(reqBody);
 
         HttpResponse res = executeHttpRequest(HttpMethod.POST, targetUrl, new StringEntity(reqBody));
-        Map<String, Object> map = parsingService.parseXContent(EntityUtils.toString(res.getEntity()));
-
-
-        List<Map<String, Object>> respes = (List<Map<String, Object>>) map.get("responses");
-        for (Map<String, Object> resp : respes) {
-            List<DateHistogramBucket> dhbList = new ArrayList<>();
-            BulkRequest br = new BulkRequest();
-            Map<String, Object> aggrs = (Map<String, Object>) resp.get("aggregations");
-            for (String aggKey : aggrs.keySet()) {
-                logger.info(aggrs.get(aggKey));
-
-                LinkedHashMap<String, Object> buckets = (LinkedHashMap<String, Object>) aggrs.get(aggKey);
-
-                for (String bucketsKey : buckets.keySet()) {
-                    List<Map<String, Object>> bucketList = (List<Map<String, Object>>) buckets.get(bucketsKey);
-                    for (Map<String, Object> bucket : bucketList) {
-                        String key_as_string = (String) bucket.get("key_as_string");
-                        Long key = (Long) bucket.get("key");
-                        logger.info("key_as_string = " + key_as_string);
-
-                        DateHistogramBucket dhb = new DateHistogramBucket(new DateTime(key), bucket);
-                        dhbList.add(dhb);
-
-                        IndexRequest ir = new IndexRequest("cache", "info", key_as_string);
-                        Map<String, Object> irMap = new HashMap<>();
-                        irMap.put("key", key_as_string);
-                        irMap.put("value", JsonUtil.convertAsString(bucket));
-                        irMap.put("ts", key);
-                        ir.source(irMap);
-                        br.add(ir);
-                    }
-                }
-            }
-            restClient.bulk(br);
-        }
-
         return res;
     }
 }

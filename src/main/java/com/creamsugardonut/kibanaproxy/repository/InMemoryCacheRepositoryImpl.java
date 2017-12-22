@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.Map;
 
-@Service
+
 public class InMemoryCacheRepositoryImpl {
     private Logger logger = LogManager.getLogger(InMemoryCacheRepositoryImpl.class);
 

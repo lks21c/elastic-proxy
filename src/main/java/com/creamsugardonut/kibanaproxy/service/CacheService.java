@@ -1,9 +1,15 @@
 package com.creamsugardonut.kibanaproxy.service;
 
 import com.creamsugardonut.kibanaproxy.util.JsonUtil;
+import com.creamsugardonut.kibanaproxy.vo.DateHistogramBucket;
+import org.apache.http.HttpResponse;
 import org.apache.http.MethodNotSupportedException;
+import org.apache.http.util.EntityUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.elasticsearch.action.bulk.BulkRequest;
+import org.elasticsearch.action.index.IndexRequest;
+import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.search.aggregations.AggregationBuilder;
 import org.elasticsearch.search.aggregations.AggregatorFactories;
 import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogramAggregationBuilder;
@@ -12,6 +18,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -24,6 +33,9 @@ public class CacheService {
 
     @Autowired
     private NativeParsingServiceImpl parsingService;
+
+    @Autowired
+    private RestHighLevelClient restClient;
 
     public void manipulateQuery(String info) throws IOException, MethodNotSupportedException {
 
@@ -75,12 +87,46 @@ public class CacheService {
                         || (interval.contains("m") && startDt.getSecondOfMinute() == 0)) {
                     logger.info("cacheable");
 
-                    esService.executeQuery("http://alyes.melon.com/_msearch", info);
+                    HttpResponse res = esService.executeQuery("http://alyes.melon.com/_msearch", info);
+                    putCache(res);
                 }
             }
         }
-
     }
 
+    private void putCache(HttpResponse res) throws IOException {
+        Map<String, Object> resMap = parsingService.parseXContent(EntityUtils.toString(res.getEntity()));
+        List<Map<String, Object>> respes = (List<Map<String, Object>>) resMap.get("responses");
+        for (Map<String, Object> resp : respes) {
+            List<DateHistogramBucket> dhbList = new ArrayList<>();
+            BulkRequest br = new BulkRequest();
+            Map<String, Object> aggrs = (Map<String, Object>) resp.get("aggregations");
+            for (String aggKey : aggrs.keySet()) {
+                logger.info(aggrs.get(aggKey));
 
+                LinkedHashMap<String, Object> buckets = (LinkedHashMap<String, Object>) aggrs.get(aggKey);
+
+                for (String bucketsKey : buckets.keySet()) {
+                    List<Map<String, Object>> bucketList = (List<Map<String, Object>>) buckets.get(bucketsKey);
+                    for (Map<String, Object> bucket : bucketList) {
+                        String key_as_string = (String) bucket.get("key_as_string");
+                        Long key = (Long) bucket.get("key");
+                        logger.info("key_as_string = " + key_as_string);
+
+                        DateHistogramBucket dhb = new DateHistogramBucket(new DateTime(key), bucket);
+                        dhbList.add(dhb);
+
+                        IndexRequest ir = new IndexRequest("cache", "info", key_as_string);
+                        Map<String, Object> irMap = new HashMap<>();
+                        irMap.put("key", key_as_string);
+                        irMap.put("value", JsonUtil.convertAsString(bucket));
+                        irMap.put("ts", key);
+                        ir.source(irMap);
+                        br.add(ir);
+                    }
+                }
+            }
+            restClient.bulk(br);
+        }
+    }
 }
