@@ -17,6 +17,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -103,7 +104,8 @@ public class CacheService {
         String cacheMode = checkCacheMode(interval, startDt, endDt, dhbList);
         logger.info("cacheMode = " + cacheMode);
 
-        if (CacheMode.ALL.equals(cacheMode)) {
+        //CacheMode.ALL.equals(cacheMode)
+        if (false) {
             String res = "{\n" +
                     "  \"responses\": [\n" +
                     "    {\n" +
@@ -123,7 +125,12 @@ public class CacheService {
                     "        \"2\": {\n" +
                     "          \"buckets\": \n";
 
-            res += JsonUtil.convertAsString(dhbList);
+
+            List<Map<String, Object>> buckets = new ArrayList<>();
+            for (DateHistogramBucket bucket : dhbList) {
+                buckets.add(bucket.getBucket());
+            }
+            res += JsonUtil.convertAsString(buckets);
 
             res += "            \n" +
                     "        }\n" +
@@ -141,28 +148,31 @@ public class CacheService {
 
             return res;
         } else {
+            logger.info("else invoked " + startDt.getSecondOfDay());
+
+            HttpResponse res = esService.executeQuery(esUrl + "/_msearch", info);
+
+            String body = null;
+            try {
+                body = EntityUtils.toString(res.getEntity());
+            } catch (Exception e) {
+                logger.info("exception occurred");
+                e.printStackTrace();
+            }
+
+//            body = body.replace("\"timed_out\":false,", "");
+            logger.info("original body = " + body);
+
             // Cacheable
             if ((interval.contains("d") && startDt.getSecondOfDay() == 0)
                     || (interval.contains("h") && startDt.getMinuteOfHour() == 0 && startDt.getSecondOfMinute() == 0)
                     || (interval.contains("m") && startDt.getSecondOfMinute() == 0)) {
                 logger.info("cacheable");
-
-                HttpResponse res = esService.executeQuery(esUrl + "/_msearch", info);
-
-                String entity = null;
-                try {
-                    entity = EntityUtils.toString(res.getEntity());
-                } catch (Exception e) {
-                    logger.info("exception occurred");
-                    e.printStackTrace();
-                }
-                logger.info("before put cache");
-                cacheRepository.putCache(entity, indexName, JsonUtil.convertAsString(aggs), interval);
-                return entity;
+                cacheRepository.putCache(body, indexName, JsonUtil.convertAsString(aggs), interval);
             }
-        }
 
-        return null;
+            return body;
+        }
     }
 
     private String checkCacheMode(String interval, DateTime startDt, DateTime endDt, List<DateHistogramBucket> dhbList) {
