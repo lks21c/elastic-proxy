@@ -103,16 +103,19 @@ public class PreFilter extends ZuulFilter {
                     // Invokes query
                     logger.info("invokeinvoke");
                     HttpResponse res = esService.executeQuery(targetUrl, reqBody);
-                    logger.info("res = " + EntityUtils.toString(res.getEntity()));
+                    String resBody = EntityUtils.toString(res.getEntity());
+                    logger.info("res = " + resBody);
 //
                     // Intercepts response and cancels the original request.
                     if (res.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
-                        ctx.setResponseBody(EntityUtils.toString(res.getEntity()));
+                        logger.info("sc ok");
+                        ctx.setResponseBody(resBody);
                         ctx.setSendZuulResponse(false);
                     }
                 }
             }
         } catch (Exception e) {
+            e.printStackTrace();
         }
         return null;
     }
