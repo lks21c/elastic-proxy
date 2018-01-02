@@ -6,9 +6,6 @@ import com.creamsugardonut.kibanaproxy.service.NativeParsingServiceImpl;
 import com.netflix.zuul.ZuulFilter;
 import com.netflix.zuul.context.RequestContext;
 import org.apache.commons.lang.StringUtils;
-import org.apache.http.HttpResponse;
-import org.apache.http.HttpStatus;
-import org.apache.http.util.EntityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -102,15 +99,13 @@ public class PreFilter extends ZuulFilter {
 
                     // Invokes query
                     logger.info("invokeinvoke");
-                    HttpResponse res = esService.executeQuery(targetUrl, reqBody);
-                    String resBody = EntityUtils.toString(res.getEntity());
-                    logger.info("res = " + resBody);
+                    String resBody = cacheService.manipulateQuery(reqBody);
 //
                     // Intercepts response and cancels the original request.
-                    if (res.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
+                    if (!StringUtils.isEmpty(resBody)) {
                         logger.info("sc ok");
                         ctx.setResponseBody(resBody);
-                        ctx.setSendZuulResponse(false);
+//                        ctx.setSendZuulResponse(false);
                     }
                 }
             }
