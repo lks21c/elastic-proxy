@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
+import java.util.Enumeration;
 import java.util.stream.Collectors;
 
 /**
@@ -85,9 +86,16 @@ public class PreFilter extends ZuulFilter {
                 String[] reqs = reqBody.split("\n");
 
                 logger.info("reqBody = " + reqBody);
-                logger.info("curl -X POST -L '" + targetUrl + "' " + " --data '" + reqBody + "'");
+//                logger.info("curl -X POST -L '" + targetUrl + "' " + " --data '" + reqBody + "'");
 
                 if (request.getRequestURI().equals("/" + PROXY + "/_msearch")) {
+
+                    Enumeration<String> headers = request.getHeaderNames();
+
+                    while (headers.hasMoreElements()) {
+                        String header = headers.nextElement();
+                        System.out.println("header = " + header + " " + request.getHeader(header));
+                    }
 
                     // parses query and manipulates query.
 //                    for (int i = 0; i < reqs.length; i++) {
@@ -100,13 +108,25 @@ public class PreFilter extends ZuulFilter {
                     // Invokes query
                     logger.info("invokeinvoke");
                     String resBody = cacheService.manipulateQuery(reqBody);
-//
                     // Intercepts response and cancels the original request.
                     if (!StringUtils.isEmpty(resBody)) {
-                        logger.info("sc ok");
-//                        ctx.setResponseBody(resBody);
-//                        ctx.setSendZuulResponse(false);
+                        logger.info("sc ok " + resBody);
+
+                        ctx.addOriginResponseHeader("content-type","application/json; charset=UTF-8");
+                        ctx.addOriginResponseHeader("Vary","Accept-Encoding");
+                        ctx.addOriginResponseHeader("Connection","Keep-Alive");
+                        ctx.setChunkedRequestBody();
+//                        ctx.setResponseStatusCode(200);
+                        ctx.setResponseBody(resBody);
+                        ctx.setSendZuulResponse(false);
                     }
+
+//                    HttpResponse res = esService.executeQuery(targetUrl, reqBody);
+//                    if (res.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
+//                        ctx.setResponse(res);
+//                        ctx.setChunkedRequestBody();
+//                    }
+
                 }
             }
         } catch (Exception e) {
