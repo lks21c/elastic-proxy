@@ -104,8 +104,7 @@ public class CacheService {
         String cacheMode = checkCacheMode(interval, startDt, endDt, dhbList);
         logger.info("cacheMode = " + cacheMode);
 
-        //CacheMode.ALL.equals(cacheMode)
-        if (false) {
+        if (CacheMode.ALL.equals(cacheMode)) {
             String res = "{\n" +
                     "  \"responses\": [\n" +
                     "    {\n" +
