@@ -86,7 +86,7 @@ public class ElasticSearchServiceService {
         logger.info("curl -X POST -L '" + targetUrl + "' " + " --data '" + reqBody + "'");
 
         HttpResponse res = executeHttpRequest(HttpMethod.POST, targetUrl, new StringEntity(reqBody));
-        logger.info("res = " + EntityUtils.toString(res.getEntity()));
+//        logger.info("res = " + EntityUtils.toString(res.getEntity()));
         return res;
     }
 }

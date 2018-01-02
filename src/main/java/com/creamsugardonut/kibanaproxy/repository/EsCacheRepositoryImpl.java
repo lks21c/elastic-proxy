@@ -90,6 +90,7 @@ public class EsCacheRepositoryImpl implements CacheRepository {
             logger.info("resMap = " + JsonUtil.convertAsString(resMap));
         } catch (Exception e) {
             e.printStackTrace();
+            logger.info("exception occurred");
         }
 
         List<Map<String, Object>> respes = (List<Map<String, Object>>) resMap.get("responses");

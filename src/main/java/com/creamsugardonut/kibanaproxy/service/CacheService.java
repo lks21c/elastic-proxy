@@ -10,9 +10,6 @@ import org.apache.http.MethodNotSupportedException;
 import org.apache.http.util.EntityUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.elasticsearch.search.aggregations.AggregationBuilder;
-import org.elasticsearch.search.aggregations.AggregatorFactories;
-import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogramAggregationBuilder;
 import org.joda.time.DateTime;
 import org.joda.time.Days;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -85,6 +82,7 @@ public class CacheService {
 
 
         List<DateHistogramBucket> dhbList = cacheRepository.getCache(indexName, JsonUtil.convertAsString(aggs), startDt, endDt);
+        logger.info("dhbList = " + JsonUtil.convertAsString(dhbList));
 
         // Parse 1 depth aggregation
         // Get aggs
@@ -150,9 +148,17 @@ public class CacheService {
                 logger.info("cacheable");
 
                 HttpResponse res = esService.executeQuery(esUrl + "/_msearch", info);
-                String entity = EntityUtils.toString(res.getEntity());
+
+                String entity = null;
+                try {
+                    entity = EntityUtils.toString(res.getEntity());
+                } catch (Exception e) {
+                    logger.info("exception occurred");
+                    e.printStackTrace();
+                }
+                logger.info("before put cache");
                 cacheRepository.putCache(entity, indexName, JsonUtil.convertAsString(aggs), interval);
-                return EntityUtils.toString(res.getEntity());
+                return entity;
             }
         }
 
