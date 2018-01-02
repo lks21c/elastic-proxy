@@ -104,7 +104,7 @@ public class PreFilter extends ZuulFilter {
                     // Intercepts response and cancels the original request.
                     if (!StringUtils.isEmpty(resBody)) {
                         logger.info("sc ok");
-                        ctx.setResponseBody(resBody);
+//                        ctx.setResponseBody(resBody);
 //                        ctx.setSendZuulResponse(false);
                     }
                 }
