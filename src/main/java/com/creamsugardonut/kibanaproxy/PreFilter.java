@@ -125,13 +125,6 @@ public class PreFilter extends ZuulFilter {
                         ctx.setResponseBody(resBody);
                         ctx.setSendZuulResponse(false);
                     }
-
-//                    HttpResponse res = esService.executeQuery(targetUrl, reqBody);
-//                    if (res.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
-//                        ctx.setResponse(res);
-//                        ctx.setChunkedRequestBody();
-//                    }
-
                 }
             }
         } catch (Exception e) {
