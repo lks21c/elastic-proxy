@@ -6,13 +6,12 @@ import com.creamsugardonut.kibanaproxy.service.NativeParsingServiceImpl;
 import com.netflix.zuul.ZuulFilter;
 import com.netflix.zuul.context.RequestContext;
 import org.apache.commons.lang.StringUtils;
-import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
-import org.apache.http.util.EntityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
 
 import javax.servlet.http.HttpServletRequest;
@@ -61,6 +60,7 @@ public class PreFilter extends ZuulFilter {
         RequestContext ctx = RequestContext.getCurrentContext();
         HttpServletRequest request = ctx.getRequest();
 
+        //TODO: 임시로 처리, 지울 예정
         if (request.getRequestURI().equals("/proxy/.kibana/config/_search") ||
                 request.getRequestURI().equals("/proxy/_mget") ||
                 request.getRequestURI().equals("/proxy/_cluster/settings") ||
@@ -89,40 +89,23 @@ public class PreFilter extends ZuulFilter {
                 String[] reqs = reqBody.split("\n");
 
                 logger.info("reqBody = " + reqBody);
-//                logger.info("curl -X POST -L '" + targetUrl + "' " + " --data '" + reqBody + "'");
 
-                if (request.getRequestURI().equals("/" + PROXY + "/_msearch")) {
-
-                    Enumeration<String> headers = request.getHeaderNames();
-
-                    while (headers.hasMoreElements()) {
-                        String header = headers.nextElement();
-                        System.out.println("header = " + header + " " + request.getHeader(header));
-                    }
-
-                    // parses query and manipulates query.
-//                    for (int i = 0; i < reqs.length; i++) {
-//                        if (i % 2 == 1) {
-//                            Map<String, Object> query = parsingService.parseXContent(reqs[i]);
-//                            cacheService.manipulateQuery(query);
-//                        }
+                if (request.getRequestURI().contains("/_msearch")) {
+//                    Enumeration<String> headers = request.getHeaderNames();
+//                    while (headers.hasMoreElements()) {
+//                        String header = headers.nextElement();
+//                        System.out.println("header = " + header + " " + request.getHeader(header));
 //                    }
 
-                    // Invokes query
-                    logger.info("invokeinvoke");
-                    HttpResponse res = esService.executeQuery(targetUrl, reqBody);
-                    // Intercepts response and cancels the original request.
-                    if (res.getStatusLine().getStatusCode() == 200) {
+                    String body = cacheService.manipulateQuery(reqBody);
+                    if (!StringUtils.isEmpty(body)) {
                         logger.info("sc ok ");
-
-                        String resBody = EntityUtils.toString(res.getEntity());
-                        logger.info("resBody = " + resBody);
-
-                        ctx.addZuulResponseHeader("content-type","application/json; charset=UTF-8");
-                        ctx.addZuulResponseHeader("Vary","Accept-Encoding");
-                        ctx.addZuulResponseHeader("Connection","Keep-Alive");
-                        ctx.setResponseStatusCode(200);
-                        ctx.setResponseBody(resBody);
+                        logger.info("resBody = " + body);
+                        ctx.addZuulResponseHeader(HttpHeaders.CONTENT_TYPE, "application/json; charset=UTF-8");
+                        ctx.addZuulResponseHeader(HttpHeaders.VARY, "Accept-Encoding");
+                        ctx.addZuulResponseHeader(HttpHeaders.CONNECTION, "Keep-Alive");
+                        ctx.setResponseStatusCode(HttpStatus.SC_OK);
+                        ctx.setResponseBody(body);
                         ctx.setSendZuulResponse(false);
                     }
                 }
