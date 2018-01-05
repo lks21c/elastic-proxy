@@ -7,6 +7,7 @@ import com.netflix.zuul.ZuulFilter;
 import com.netflix.zuul.context.RequestContext;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpResponse;
+import org.apache.http.HttpStatus;
 import org.apache.http.util.EntityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -108,21 +109,22 @@ public class PreFilter extends ZuulFilter {
 //                    }
 
                     // Invokes query
-//                    logger.info("invokeinvoke");
-//                    HttpResponse res = esService.executeQuery(targetUrl, reqBody);
-//                    // Intercepts response and cancels the original request.
-//                    if (res.getStatusLine().getStatusCode() == 200) {
-//                        logger.info("sc ok ");
-//
-//                        String resBody = EntityUtils.toString(res.getEntity());
-//                        logger.info("resBody = " + resBody);
-//
-//                        ctx.addOriginResponseHeader("content-type","application/json; charset=UTF-8");
-////                        ctx.setChunkedRequestBody();
-//                        ctx.setResponseStatusCode(200);
-//                        ctx.setResponseBody(resBody);
-//                        ctx.setSendZuulResponse(false);
-//                    }
+                    logger.info("invokeinvoke");
+                    HttpResponse res = esService.executeQuery(targetUrl, reqBody);
+                    // Intercepts response and cancels the original request.
+                    if (res.getStatusLine().getStatusCode() == 200) {
+                        logger.info("sc ok ");
+
+                        String resBody = EntityUtils.toString(res.getEntity());
+                        logger.info("resBody = " + resBody);
+
+                        ctx.addZuulResponseHeader("content-type","application/json; charset=UTF-8");
+                        ctx.addZuulResponseHeader("Vary","Accept-Encoding");
+                        ctx.addZuulResponseHeader("Connection","Keep-Alive");
+                        ctx.setResponseStatusCode(200);
+                        ctx.setResponseBody(resBody);
+                        ctx.setSendZuulResponse(false);
+                    }
 
 //                    HttpResponse res = esService.executeQuery(targetUrl, reqBody);
 //                    if (res.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
