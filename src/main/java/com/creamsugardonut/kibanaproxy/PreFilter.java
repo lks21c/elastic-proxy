@@ -16,7 +16,6 @@ import org.springframework.stereotype.Service;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
-import java.util.Enumeration;
 import java.util.stream.Collectors;
 
 /**
@@ -86,8 +85,6 @@ public class PreFilter extends ZuulFilter {
             if ("POST".equals(request.getMethod())) {
                 String reqBody = getRequestBody(request);
 
-                String[] reqs = reqBody.split("\n");
-
                 logger.info("reqBody = " + reqBody);
 
                 if (request.getRequestURI().contains("/_msearch")) {
@@ -97,15 +94,21 @@ public class PreFilter extends ZuulFilter {
 //                        System.out.println("header = " + header + " " + request.getHeader(header));
 //                    }
 
-                    String body = cacheService.manipulateQuery(reqBody);
-                    if (!StringUtils.isEmpty(body)) {
+                    String[] reqs = reqBody.split("\n");
+                    StringBuilder sb = new StringBuilder();
+                    for (int i = 0; i < reqs.length; i = i + 2) {
+                        String body = cacheService.manipulateQuery(reqs[i] + "\n" + reqs[i + 1] + "\n");
+                        sb.append(body + "\n");
+                    }
+
+                    if (sb.length() > 0) {
                         logger.info("sc ok ");
-                        logger.info("resBody = " + body);
+                        logger.info("resBody = " + sb.toString());
                         ctx.addZuulResponseHeader(HttpHeaders.CONTENT_TYPE, "application/json; charset=UTF-8");
                         ctx.addZuulResponseHeader(HttpHeaders.VARY, "Accept-Encoding");
                         ctx.addZuulResponseHeader(HttpHeaders.CONNECTION, "Keep-Alive");
                         ctx.setResponseStatusCode(HttpStatus.SC_OK);
-                        ctx.setResponseBody(body);
+                        ctx.setResponseBody(sb.toString());
                         ctx.setSendZuulResponse(false);
                     }
                 }
