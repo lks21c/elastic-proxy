@@ -103,7 +103,7 @@ public class CacheService {
         }
 
         String cacheMode = checkCacheMode(interval, startDt, endDt, dhbList);
-        logger.info("cacheMode = " + cacheMode);
+        logger.info("cacheMode = " + cacheMode + " cache size : " + dhbList.size());
 
         if (CacheMode.ALL.equals(cacheMode)) {
             String res = "{\n" +
