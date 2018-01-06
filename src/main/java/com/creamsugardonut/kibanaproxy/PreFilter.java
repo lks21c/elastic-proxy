@@ -3,6 +3,7 @@ package com.creamsugardonut.kibanaproxy;
 import com.creamsugardonut.kibanaproxy.service.CacheService;
 import com.creamsugardonut.kibanaproxy.service.ElasticSearchServiceService;
 import com.creamsugardonut.kibanaproxy.service.NativeParsingServiceImpl;
+import com.creamsugardonut.kibanaproxy.util.JsonUtil;
 import com.netflix.zuul.ZuulFilter;
 import com.netflix.zuul.context.RequestContext;
 import org.apache.commons.lang.StringUtils;
@@ -16,6 +17,10 @@ import org.springframework.stereotype.Service;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -85,6 +90,8 @@ public class PreFilter extends ZuulFilter {
             if ("POST".equals(request.getMethod())) {
                 String reqBody = getRequestBody(request);
 
+                logger.info("original curl -X POST -L '" + targetUrl + "' " + " --data '" + reqBody + "'");
+
                 logger.info("reqBody = " + reqBody);
 
                 if (request.getRequestURI().contains("/_msearch")) {
@@ -96,9 +103,24 @@ public class PreFilter extends ZuulFilter {
 
                     String[] reqs = reqBody.split("\n");
                     StringBuilder sb = new StringBuilder();
-                    for (int i = 0; i < reqs.length; i = i + 2) {
-                        String body = cacheService.manipulateQuery(reqs[i] + "\n" + reqs[i + 1] + "\n");
-                        sb.append(body + "\n");
+                    List<Map<String, Object>> rb = new ArrayList<>();
+
+                    // Handles multi search
+                    if (reqs.length > 2) {
+                        for (int i = 0; i < reqs.length; i = i + 2) {
+                            String body = cacheService.manipulateQuery(reqs[i] + "\n" + reqs[i + 1] + "\n");
+                            Map<String, Object> resMap = parsingService.parseXContent(body);
+                            List<Map<String, Object>> responses = (List<Map<String, Object>>) resMap.get("responses");
+                            rb.add(responses.get(0));
+                        }
+                        Map<String, Object> mergedRes = new HashMap<>();
+                        mergedRes.put("responses", rb);
+                        sb.append(JsonUtil.convertAsString(mergedRes));
+                    } else {
+                        for (int i = 0; i < reqs.length; i = i + 2) {
+                            String body = cacheService.manipulateQuery(reqs[i] + "\n" + reqs[i + 1] + "\n");
+                            sb.append(body + "\n");
+                        }
                     }
 
                     if (sb.length() > 0) {
