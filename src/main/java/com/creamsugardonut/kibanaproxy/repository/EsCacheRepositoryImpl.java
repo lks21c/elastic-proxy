@@ -59,6 +59,7 @@ public class EsCacheRepositoryImpl implements CacheRepository {
 
         SearchSourceBuilder sb = new SearchSourceBuilder();
         sb.query(bq);
+        sb.size(10000);
         sb.sort("ts", SortOrder.ASC);
 
         SearchRequest srch = new SearchRequest().indices("cache").types("info");
