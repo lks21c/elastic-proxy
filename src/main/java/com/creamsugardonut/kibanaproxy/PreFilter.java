@@ -7,7 +7,10 @@ import com.creamsugardonut.kibanaproxy.util.JsonUtil;
 import com.netflix.zuul.ZuulFilter;
 import com.netflix.zuul.context.RequestContext;
 import org.apache.commons.lang.StringUtils;
+import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
+import org.apache.http.util.EntityUtils;
+import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,6 +44,9 @@ public class PreFilter extends ZuulFilter {
 
     @Value("${zuul.routes.proxy.url}")
     private String esUrl;
+
+    @Value("${esc.cache}")
+    private Boolean esCache;
 
     private static final String PROXY = "proxy";
 
@@ -102,25 +108,31 @@ public class PreFilter extends ZuulFilter {
 //                    }
 
                     String[] reqs = reqBody.split("\n");
-                    StringBuilder sb = new StringBuilder();
-                    List<Map<String, Object>> rb = new ArrayList<>();
 
-                    // Handles multi search
-                    if (reqs.length > 2) {
-                        for (int i = 0; i < reqs.length; i = i + 2) {
-                            String body = cacheService.manipulateQuery(reqs[i] + "\n" + reqs[i + 1] + "\n");
-                            Map<String, Object> resMap = parsingService.parseXContent(body);
-                            List<Map<String, Object>> responses = (List<Map<String, Object>>) resMap.get("responses");
-                            rb.add(responses.get(0));
+                    StringBuilder sb = new StringBuilder();
+                    if(esCache) {
+                        List<Map<String, Object>> rb = new ArrayList<>();
+
+                        // Handles multi search
+                        if (reqs.length > 2) {
+                            for (int i = 0; i < reqs.length; i = i + 2) {
+                                String body = cacheService.manipulateQuery(reqs[i] + "\n" + reqs[i + 1] + "\n");
+                                Map<String, Object> resMap = parsingService.parseXContent(body);
+                                List<Map<String, Object>> responses = (List<Map<String, Object>>) resMap.get("responses");
+                                rb.add(responses.get(0));
+                            }
+                            Map<String, Object> mergedRes = new HashMap<>();
+                            mergedRes.put("responses", rb);
+                            sb.append(JsonUtil.convertAsString(mergedRes));
+                        } else {
+                            for (int i = 0; i < reqs.length; i = i + 2) {
+                                String body = cacheService.manipulateQuery(reqs[i] + "\n" + reqs[i + 1] + "\n");
+                                sb.append(body + "\n");
+                            }
                         }
-                        Map<String, Object> mergedRes = new HashMap<>();
-                        mergedRes.put("responses", rb);
-                        sb.append(JsonUtil.convertAsString(mergedRes));
                     } else {
-                        for (int i = 0; i < reqs.length; i = i + 2) {
-                            String body = cacheService.manipulateQuery(reqs[i] + "\n" + reqs[i + 1] + "\n");
-                            sb.append(body + "\n");
-                        }
+                        HttpResponse res = esService.executeQuery(targetUrl, reqBody);
+                        sb.append(EntityUtils.toString(res.getEntity()));
                     }
 
                     if (sb.length() > 0) {
