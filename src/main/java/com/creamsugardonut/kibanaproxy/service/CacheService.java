@@ -5,6 +5,7 @@ import com.creamsugardonut.kibanaproxy.repository.CacheRepository;
 import com.creamsugardonut.kibanaproxy.util.IndexNameUtil;
 import com.creamsugardonut.kibanaproxy.util.JsonUtil;
 import com.creamsugardonut.kibanaproxy.vo.DateHistogramBucket;
+import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.MethodNotSupportedException;
 import org.apache.http.util.EntityUtils;
@@ -163,9 +164,9 @@ public class CacheService {
             logger.info("original body = " + body);
 
             // Cacheable
-            if ((interval.contains("d") && startDt.getSecondOfDay() == 0)
+            if (!StringUtils.isEmpty(interval) && ((interval.contains("d") && startDt.getSecondOfDay() == 0)
                     || (interval.contains("h") && startDt.getMinuteOfHour() == 0 && startDt.getSecondOfMinute() == 0)
-                    || (interval.contains("m") && startDt.getSecondOfMinute() == 0)) {
+                    || (interval.contains("m") && startDt.getSecondOfMinute() == 0))) {
                 logger.info("cacheable");
                 cacheRepository.putCache(body, indexName, JsonUtil.convertAsString(aggs), interval);
             }
