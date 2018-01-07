@@ -1,16 +1,34 @@
 package com.creamsugardonut.kibanaproxy.repository;
 
+import com.creamsugardonut.kibanaproxy.service.ParsingService;
+import com.creamsugardonut.kibanaproxy.util.JsonUtil;
+import com.creamsugardonut.kibanaproxy.vo.DateHistogramBucket;
+import com.google.gson.Gson;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.elasticsearch.action.bulk.BulkRequest;
+import org.elasticsearch.action.index.IndexRequest;
+import org.elasticsearch.action.search.SearchRequest;
+import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.QueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.search.SearchHit;
+import org.elasticsearch.search.builder.SearchSourceBuilder;
+import org.elasticsearch.search.sort.SortOrder;
+import org.joda.time.DateTime;
+import org.joda.time.Days;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.CacheManager;
+import org.springframework.stereotype.Service;
 
-import java.util.Map;
+import java.io.IOException;
+import java.util.*;
 
 /**
  * @author lks21c
  */
-public class InMemoryCacheRepositoryImpl {
+public class InMemoryCacheRepositoryImpl implements CacheRepository {
     private Logger logger = LogManager.getLogger(InMemoryCacheRepositoryImpl.class);
 
     public static final String CACHE_KEY = "cache";
@@ -18,12 +36,8 @@ public class InMemoryCacheRepositoryImpl {
     @Autowired
     CacheManager cacheManager;
 
-    public void setCache(String key, int year
-            , int month, Integer day, int hour, int minute, String query, Map<String, Object> cachePeriod) {
-        String cacheKey = key + year + "_" + month + "_" + day + "_" + hour + "_" + minute + "_" + query;
-//        logger.info("set key = " + key);
-        cacheManager.getCache(CACHE_KEY).put(key, cachePeriod);
-    }
+    @Autowired
+    private ParsingService parsingService;
 
     public Map<String, Object> getCache(String key, int year, int month, Integer day, int hour, int minute, String query) {
         String cacheKey = key + year + "_" + month + "_" + day + "_" + hour + "_" + minute + "_" + query;
@@ -32,5 +46,63 @@ public class InMemoryCacheRepositoryImpl {
 
 //        logger.info("cache : " + JsonUtil.convertAsString(cachePeriod));
         return cachePeriod;
+    }
+
+    @Override
+    public List<DateHistogramBucket> getCache(String indexName, String agg, DateTime startDt, DateTime endDt) throws IOException {
+        String key = indexName + agg;
+        logger.info("get cache " + key);
+
+        List<DateHistogramBucket> dhbList = new ArrayList<>();
+
+        return dhbList;
+    }
+
+    @Override
+    public void putCache(String res, String indexName, String agg, String interval) throws IOException {
+        String key = indexName + agg;
+        Map<String, Object> resMap = null;
+        try {
+            logger.info("before res map");
+            resMap = parsingService.parseXContent(res);
+            logger.info("resMap = " + JsonUtil.convertAsString(resMap));
+        } catch (Exception e) {
+            e.printStackTrace();
+            logger.info("exception occurred");
+        }
+
+        List<Map<String, Object>> respes = (List<Map<String, Object>>) resMap.get("responses");
+        for (Map<String, Object> resp : respes) {
+            Map<String, Object> aggrs = (Map<String, Object>) resp.get("aggregations");
+            for (String aggKey : aggrs.keySet()) {
+                logger.info("aggKey = " + aggrs.get(aggKey));
+
+                LinkedHashMap<String, Object> buckets = (LinkedHashMap<String, Object>) aggrs.get(aggKey);
+
+                for (String bucketsKey : buckets.keySet()) {
+                    List<Map<String, Object>> bucketList = (List<Map<String, Object>>) buckets.get(bucketsKey);
+                    for (Map<String, Object> bucket : bucketList) {
+                        String key_as_string = (String) bucket.get("key_as_string");
+                        Long ts = (Long) bucket.get("key");
+                        logger.info("for key_as_string = " + key_as_string);
+
+                        if ("1d".equals(interval)) {
+                            if (Days.daysBetween(new DateTime(ts), new DateTime())
+                                    .isGreaterThan(Days.days(0))) { /* 과거 ~ 오늘전까지만 캐시 */
+
+                                logger.info("put cache " + key + "_" + ts);
+                                setCache(key + "_" + ts, JsonUtil.convertAsString(bucket));
+
+                                //TODO:
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    public void setCache(String key, String value) {
+        cacheManager.getCache(CACHE_KEY).put(key, value);
     }
 }
