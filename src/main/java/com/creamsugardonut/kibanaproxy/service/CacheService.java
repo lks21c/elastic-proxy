@@ -14,6 +14,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.joda.time.DateTime;
 import org.joda.time.Days;
+import org.joda.time.Minutes;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -193,14 +194,21 @@ public class CacheService {
     private String checkCacheMode(String interval, DateTime startDt, DateTime endDt, List<DateHistogramBucket> dhbList) {
         int startTimeFirstCacheGap = -1;
 
-        if (dhbList.size() > 0) {
-            startTimeFirstCacheGap = Days.daysBetween(startDt, dhbList.get(0).getDate()).getDays();
-        }
-
         if ("1d".equals(interval)) {
+            if (dhbList.size() > 0) {
+                startTimeFirstCacheGap = Days.daysBetween(startDt, dhbList.get(0).getDate()).getDays();
+            }
             if (startTimeFirstCacheGap == 0) {
                 // 86399 means 23:59:59.999
                 if (Days.daysBetween(startDt, endDt).getDays() + 1 == dhbList.size() && endDt.getSecondOfDay() == 86399) {
+                    return CacheMode.ALL;
+                } else if (dhbList.size() > 0) {
+                    return CacheMode.PARTIAL;
+                }
+            }
+        } else if ("1m".equals(interval)) {
+            if (dhbList.size() > 0) {
+                if (Minutes.minutesBetween(startDt, endDt).getMinutes() == dhbList.size()) {
                     return CacheMode.ALL;
                 } else if (dhbList.size() > 0) {
                     return CacheMode.PARTIAL;
