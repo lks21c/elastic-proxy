@@ -142,13 +142,9 @@ public class CacheService {
 
             logger.info("final res = " + res);
 
-            /* 임시 */
-            esService.executeQuery(esUrl + "/_msearch", info);
-            /* 임시 */
-
             return res;
         } else {
-            logger.info("else invoked " + startDt.getSecondOfDay());
+            logger.info("else, so original request invoked " + startDt.getSecondOfDay());
 
             HttpResponse res = esService.executeQuery(esUrl + "/_msearch", info);
 
