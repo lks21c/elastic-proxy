@@ -114,6 +114,13 @@ public class CacheService {
             }
         }
 
+        // TODO: This ignores ESC's policy, transparency.
+        if ("1m".equals(interval)) {
+            startDt = startDt.withMillisOfSecond(0);
+            startDt = startDt.withSecondOfMinute(0);
+            logger.info("manipulated startDt = " + startDt);
+        }
+
         String cacheMode = checkCacheMode(interval, startDt, endDt, dhbList);
         logger.info("cacheMode = " + cacheMode + " cache size : " + dhbList.size());
 

@@ -23,6 +23,7 @@ import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.sort.SortOrder;
 import org.joda.time.DateTime;
 import org.joda.time.Days;
+import org.joda.time.Minutes;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -115,6 +116,25 @@ public class EsCacheRepositoryImpl implements CacheRepository {
                         if ("1d".equals(interval)) {
                             if (Days.daysBetween(new DateTime(ts), new DateTime())
                                     .isGreaterThan(Days.days(0))) { /* 과거 ~ 오늘전까지만 캐시 */
+
+                                DateHistogramBucket dhb = new DateHistogramBucket(new DateTime(ts), bucket);
+                                dhbList.add(dhb);
+
+                                logger.info("put cache " + key + "_" + ts);
+                                String str = key + "_" + ts;
+                                MurmurHash3.Hash128 hash = MurmurHash3.hash128(str.getBytes(), 0, str.getBytes().length, 0, new MurmurHash3.Hash128());
+                                String id = String.valueOf(hash.h1) + String.valueOf(hash.h2);
+                                IndexRequest ir = new IndexRequest("cache", "info", id);
+                                Map<String, Object> irMap = new HashMap<>();
+                                irMap.put("value", JsonUtil.convertAsString(bucket));
+                                irMap.put("key", key);
+                                irMap.put("ts", ts);
+                                ir.source(irMap);
+                                br.add(ir);
+                            }
+                        } else if ("1m".equals(interval)) {
+                            if (Minutes.minutesBetween(new DateTime(ts), new DateTime())
+                                    .isGreaterThan(Minutes.minutes(0))) { /* 과거 ~ 현재 시간 1분전까지만 캐시 */
 
                                 DateHistogramBucket dhb = new DateHistogramBucket(new DateTime(ts), bucket);
                                 dhbList.add(dhb);
