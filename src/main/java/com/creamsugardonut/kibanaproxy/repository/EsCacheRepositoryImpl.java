@@ -14,6 +14,7 @@ import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.common.hash.MurmurHash3;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
@@ -46,8 +47,8 @@ public class EsCacheRepositoryImpl implements CacheRepository {
     private ParsingService parsingService;
 
     @Override
-    public List<DateHistogramBucket> getCache(String indexName, String agg, DateTime startDt, DateTime endDt) throws IOException {
-        String key = indexName + agg;
+    public List<DateHistogramBucket> getCache(String indexName, String query, String agg, DateTime startDt, DateTime endDt) throws IOException {
+        String key = indexName + query + agg;
         logger.info("get cache " + key);
 
         List<QueryBuilder> qbList = new ArrayList<>();
@@ -82,8 +83,8 @@ public class EsCacheRepositoryImpl implements CacheRepository {
     }
 
     @Override
-    public void putCache(String res, String indexName, String agg, String interval) throws JsonProcessingException {
-        String key = indexName + agg;
+    public void putCache(String res, String indexName, String query, String agg, String interval) throws JsonProcessingException {
+        String key = indexName + query + agg;
         Map<String, Object> resMap = null;
         try {
             logger.info("before res map");
@@ -119,7 +120,10 @@ public class EsCacheRepositoryImpl implements CacheRepository {
                                 dhbList.add(dhb);
 
                                 logger.info("put cache " + key + "_" + ts);
-                                IndexRequest ir = new IndexRequest("cache", "info", key + "_" + ts);
+                                String str = key + "_" + ts;
+                                MurmurHash3.Hash128 hash = MurmurHash3.hash128(str.getBytes(), 0, str.getBytes().length, 0, new MurmurHash3.Hash128());
+                                String id = String.valueOf(hash.h1) + String.valueOf(hash.h2);
+                                IndexRequest ir = new IndexRequest("cache", "info", id);
                                 Map<String, Object> irMap = new HashMap<>();
                                 irMap.put("value", JsonUtil.convertAsString(bucket));
                                 irMap.put("key", key);

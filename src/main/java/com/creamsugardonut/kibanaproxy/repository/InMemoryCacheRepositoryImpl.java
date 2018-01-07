@@ -3,29 +3,22 @@ package com.creamsugardonut.kibanaproxy.repository;
 import com.creamsugardonut.kibanaproxy.service.ParsingService;
 import com.creamsugardonut.kibanaproxy.util.JsonUtil;
 import com.creamsugardonut.kibanaproxy.vo.DateHistogramBucket;
-import com.google.gson.Gson;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.elasticsearch.action.bulk.BulkRequest;
-import org.elasticsearch.action.index.IndexRequest;
-import org.elasticsearch.action.search.SearchRequest;
-import org.elasticsearch.action.search.SearchResponse;
-import org.elasticsearch.index.query.BoolQueryBuilder;
-import org.elasticsearch.index.query.QueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.search.SearchHit;
-import org.elasticsearch.search.builder.SearchSourceBuilder;
-import org.elasticsearch.search.sort.SortOrder;
 import org.joda.time.DateTime;
 import org.joda.time.Days;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.CacheManager;
-import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
+ * TODO: This implementation needs to be completed.
+ *
  * @author lks21c
  */
 public class InMemoryCacheRepositoryImpl implements CacheRepository {
@@ -49,7 +42,7 @@ public class InMemoryCacheRepositoryImpl implements CacheRepository {
     }
 
     @Override
-    public List<DateHistogramBucket> getCache(String indexName, String agg, DateTime startDt, DateTime endDt) throws IOException {
+    public List<DateHistogramBucket> getCache(String indexName, String query, String agg, DateTime startDt, DateTime endDt) throws IOException {
         String key = indexName + agg;
         logger.info("get cache " + key);
 
@@ -59,8 +52,8 @@ public class InMemoryCacheRepositoryImpl implements CacheRepository {
     }
 
     @Override
-    public void putCache(String res, String indexName, String agg, String interval) throws IOException {
-        String key = indexName + agg;
+    public void putCache(String res, String indexName, String query, String agg, String interval) throws IOException {
+        String key = indexName + query + agg;
         Map<String, Object> resMap = null;
         try {
             logger.info("before res map");

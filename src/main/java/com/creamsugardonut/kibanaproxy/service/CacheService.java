@@ -5,6 +5,7 @@ import com.creamsugardonut.kibanaproxy.repository.CacheRepository;
 import com.creamsugardonut.kibanaproxy.util.IndexNameUtil;
 import com.creamsugardonut.kibanaproxy.util.JsonUtil;
 import com.creamsugardonut.kibanaproxy.vo.DateHistogramBucket;
+import org.apache.commons.lang.SerializationUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.MethodNotSupportedException;
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -58,6 +60,8 @@ public class CacheService {
         // Get gte, lte
         DateTime startDt = null, endDt = null;
         Map<String, Object> query = (Map<String, Object>) qMap.get("query");
+
+        Map<String, Object> queryWithoutRange = (Map<String, Object>) SerializationUtils.clone((HashMap<String, Object>) query);
         Map<String, Object> bool = (Map<String, Object>) query.get("bool");
         List<Map<String, Object>> must = (List<Map<String, Object>>) bool.get("must");
 
@@ -77,13 +81,21 @@ public class CacheService {
             }
         }
 
+        Map<String, Object> clonedBool = (Map<String, Object>) queryWithoutRange.get("bool");
+        List<Map<String, Object>> clonedMust = (List<Map<String, Object>>) clonedBool.get("must");
+        for (Map<String, Object> obj : clonedMust) {
+            obj.remove("range");
+        }
+        logger.info("queryWithoutRange = " + queryWithoutRange);
+        logger.info("query = " + query);
+
         logger.info("invoked here");
 
         // Get aggs
         Map<String, Object> aggs = (Map<String, Object>) qMap.get("aggs");
 
 
-        List<DateHistogramBucket> dhbList = cacheRepository.getCache(indexName, JsonUtil.convertAsString(aggs), startDt, endDt);
+        List<DateHistogramBucket> dhbList = cacheRepository.getCache(indexName, JsonUtil.convertAsString(queryWithoutRange), JsonUtil.convertAsString(aggs), startDt, endDt);
         logger.info("dhbList = " + JsonUtil.convertAsString(dhbList));
 
         // Parse 1 depth aggregation
@@ -164,7 +176,7 @@ public class CacheService {
                     || (interval.contains("h") && startDt.getMinuteOfHour() == 0 && startDt.getSecondOfMinute() == 0)
                     || (interval.contains("m") && startDt.getSecondOfMinute() == 0))) {
                 logger.info("cacheable");
-                cacheRepository.putCache(body, indexName, JsonUtil.convertAsString(aggs), interval);
+                cacheRepository.putCache(body, indexName, JsonUtil.convertAsString(queryWithoutRange), JsonUtil.convertAsString(aggs), interval);
             }
 
             return body;
@@ -179,10 +191,13 @@ public class CacheService {
         }
 
         if ("1d".equals(interval)) {
-            if (Days.daysBetween(startDt, endDt).getDays() + 1 == dhbList.size()) {
-                return CacheMode.ALL;
-            } else if (dhbList.size() > 0 && startTimeFirstCacheGap == 0) {
-                return CacheMode.PARTIAL;
+            if (startTimeFirstCacheGap == 0) {
+                // 86399 means 23:59:59.999
+                if (Days.daysBetween(startDt, endDt).getDays() + 1 == dhbList.size() && endDt.getSecondOfDay() == 86399) {
+                    return CacheMode.ALL;
+                } else if (dhbList.size() > 0) {
+                    return CacheMode.PARTIAL;
+                }
             }
         }
         return CacheMode.NOCACHE;
