@@ -144,6 +144,8 @@ public class PreFilter extends ZuulFilter {
                         ctx.setResponseStatusCode(HttpStatus.SC_OK);
                         ctx.setResponseBody(sb.toString());
                         ctx.setSendZuulResponse(false);
+                    } else {
+                        logger.error("original request invoked.");
                     }
                 }
             }
