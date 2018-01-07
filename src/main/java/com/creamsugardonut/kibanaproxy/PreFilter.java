@@ -110,9 +110,8 @@ public class PreFilter extends ZuulFilter {
                     String[] reqs = reqBody.split("\n");
 
                     StringBuilder sb = new StringBuilder();
-                    if(esCache) {
+                    if(esCache && !reqBody.contains(".kibana")) {
                         List<Map<String, Object>> rb = new ArrayList<>();
-
                         // Handles multi search
                         if (reqs.length > 2) {
                             for (int i = 0; i < reqs.length; i = i + 2) {
